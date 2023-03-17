@@ -1,0 +1,18 @@
+BasedOnStyle: Chromium
+SortIncludes: true
+---
+Language: Cpp
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 150
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+AlignAfterOpenBracket: AlwaysBreak
+AccessModifierOffset: -4
+BreakBeforeBraces: Mozilla
+PenaltyReturnTypeOnItsOwnLine: 10000000
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+BreakBeforeBraces: Attach
