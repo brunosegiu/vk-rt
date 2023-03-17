@@ -9,17 +9,15 @@
 
 namespace VKRT {
 
-ResultValue<Device*> Device::Create(Window* window) {
-    const auto instanceResult = VulkanInstance::Create(window);
-    if (instanceResult.result == Result::Success) {
-        const auto instance = instanceResult.value;
-        return VulkanInstance::CreateDevice(instance);
+ResultValue<Device*> Device::Create(Instance* instance) {
+    auto [result, physicalDevice] = instance->FindSuitablePhysicalDevice();
+    if (result == Result::Success) {
+        return {Result::Success, new Device(instance, physicalDevice)};
     }
-    return {instanceResult.result, nullptr};
+    return {Result::InvalidDeviceError, nullptr};
 }
 
-Device::Device(const std::shared_ptr<VulkanInstance>& instance, vk::PhysicalDevice physicalDevice)
-    : mVulkanInstance(instance), mPhysicalDevice(physicalDevice) {
+Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mPhysicalDevice(physicalDevice) {
     const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = mPhysicalDevice.getQueueFamilyProperties();
     uint32_t queueFamilyIndex = 0;
     for (const auto& properties : queueFamiliesProperties) {
@@ -94,7 +92,6 @@ void Device::DestroyFence(vk::Fence& fence) {
 Device::~Device() {
     mLogicalDevice.destroyCommandPool(mCommandPool);
     mLogicalDevice.destroy();
-    mVulkanInstance = nullptr;
 }
 
 }  // namespace VKRT

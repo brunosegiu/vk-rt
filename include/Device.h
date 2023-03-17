@@ -9,13 +9,13 @@
 
 namespace VKRT {
 
-class VulkanInstance;
+class Instance;
 
 class Device : public RefCountPtr {
 public:
-    static ResultValue<Device*> Create(Window* window);
+    static ResultValue<Device*> Create(Instance* instance);
 
-    Device(const std::shared_ptr<VulkanInstance>& instance, vk::PhysicalDevice physicalDevice);
+    Device(Instance* instance, vk::PhysicalDevice physicalDevice);
 
     // Memory handling
     vk::DeviceMemory AllocateMemory(const vk::MemoryPropertyFlags& memoryFlags, const vk::MemoryRequirements memoryRequirements);
@@ -35,7 +35,6 @@ public:
     ~Device();
 
 private:
-    std::shared_ptr<VulkanInstance> mVulkanInstance;
     vk::PhysicalDevice mPhysicalDevice;
     vk::Device mLogicalDevice;
     vk::Queue mComputeQueue;

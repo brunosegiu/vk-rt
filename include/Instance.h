@@ -1,25 +1,22 @@
 #pragma once
 
-#include <memory>
-
 #include "Device.h"
 #include "Result.h"
 #include "VulkanBase.h"
 #include "Window.h"
 
 namespace VKRT {
-class VulkanInstance {
+class Instance : public RefCountPtr {
 public:
-    static ResultValue<std::shared_ptr<VulkanInstance>> Create(Window* window);
-    static ResultValue<Device*> CreateDevice(const std::shared_ptr<VulkanInstance>& instance);
+    static ResultValue<Instance*> Create(Window* window);
 
-    VulkanInstance(const vk::Instance& instance);
+    Instance(const vk::Instance& instance);
 
-    ~VulkanInstance();
-
-private:
     ResultValue<vk::PhysicalDevice> FindSuitablePhysicalDevice();
 
+    ~Instance();
+
+private:
     vk::Instance mInstanceHandle;
     vk::DispatchLoaderDynamic mDynamicDispatcher;
 #if defined(VKRT_DEBUG)

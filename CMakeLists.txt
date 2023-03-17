@@ -27,6 +27,7 @@ set(HEADERS
     include/Result.h
     include/VulkanBuffer.h
     include/Window.h
+    include/Context.h
 )
 
 set(SOURCE
@@ -37,6 +38,7 @@ set(SOURCE
     src/VulkanBuffer.cpp
     src/main.cpp
     src/Window.cpp
+    src/Context.cpp
 )
 
 set(SHADERS

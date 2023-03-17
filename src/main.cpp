@@ -1,13 +1,15 @@
-#include "Device.h"
+#include "Context.h"
 #include "Window.h"
 
 int main() {
     using namespace VKRT;
-    Window* window = new Window();
-    auto [result, device] = Device::Create(window);
-    window->ProcessEvents();
-    if (result == Result::Success) {
-        device->Release();
+    auto [windowResult, window] = Window::Create();
+    if (windowResult == Result::Success) {
+        auto [contextResult, context] = Context::Create(window);
+        window->ProcessEvents();
+        if (contextResult == Result::Success) {
+            context->Release();
+        }
     }
     window->Release();
 }

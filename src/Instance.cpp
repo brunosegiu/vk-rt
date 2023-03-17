@@ -19,7 +19,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 }
 #endif
 
-ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create(Window* window) {
+ResultValue<Instance*> Instance::Create(Window* window) {
     const vk::ApplicationInfo appInfo = vk::ApplicationInfo()
                                             .setPApplicationName("VKRT")
                                             .setApplicationVersion(VK_MAKE_VERSION(0, 0, 1))
@@ -33,10 +33,7 @@ ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create(Window* wind
 #endif
     };
 
-    std::vector<const char*> extensionsToEnable {
-        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
-    };
+    std::vector<const char*> extensionsToEnable{VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
 
     std::vector<std::string> requiredWindowExtensions = window->GetRequiredVulkanExtensions();
     for (const std::string& requiredWindowExtension : requiredWindowExtensions) {
@@ -66,19 +63,17 @@ ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create(Window* wind
         return {Result::DriverNotFoundError, nullptr};
     }
 
-    const vk::InstanceCreateInfo instanceInfo = vk::InstanceCreateInfo()
-                                                    .setPApplicationInfo(&appInfo)
-                                                    .setPEnabledExtensionNames(extensionsToEnable)
-                                                    .setPEnabledLayerNames(layersToEnable);
+    const vk::InstanceCreateInfo instanceInfo =
+        vk::InstanceCreateInfo().setPApplicationInfo(&appInfo).setPEnabledExtensionNames(extensionsToEnable).setPEnabledLayerNames(layersToEnable);
 
     auto [instanceResult, instanceHandle] = vk::createInstance(instanceInfo);
     if (instanceResult == vk::Result::eSuccess) {
-        return {Result::Success, std::make_shared<VulkanInstance>(instanceHandle)};
+        return {Result::Success, new Instance(instanceHandle)};
     }
     return {Result::DriverNotFoundError, nullptr};
 }
 
-VulkanInstance::VulkanInstance(const vk::Instance& instance) : mInstanceHandle(instance) {
+Instance::Instance(const vk::Instance& instance) : mInstanceHandle(instance) {
     mDynamicDispatcher = vk::DispatchLoaderDynamic(mInstanceHandle, vkGetInstanceProcAddr);
     mDynamicDispatcher.init(mInstanceHandle, vkGetInstanceProcAddr);
 
@@ -97,15 +92,7 @@ VulkanInstance::VulkanInstance(const vk::Instance& instance) : mInstanceHandle(i
 #endif
 }
 
-ResultValue<Device*> VulkanInstance::CreateDevice(const std::shared_ptr<VulkanInstance>& instance) {
-    auto [result, physicalDevice] = instance->FindSuitablePhysicalDevice();
-    if (result == Result::Success) {
-        return {Result::Success, new Device(instance, physicalDevice)};
-    }
-    return {Result::InvalidDeviceError, nullptr};
-}
-
-ResultValue<vk::PhysicalDevice> VulkanInstance::FindSuitablePhysicalDevice() {
+ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
     const std::vector<vk::PhysicalDevice> physicalDevices = VKRT_ASSERT_VK(mInstanceHandle.enumeratePhysicalDevices());
     vk::PhysicalDevice chosenDevice = nullptr;
     uint32_t chosenDeviceScore = 0;
@@ -137,7 +124,7 @@ ResultValue<vk::PhysicalDevice> VulkanInstance::FindSuitablePhysicalDevice() {
     return {chosenDeviceScore > 0 ? Result::Success : Result::NoSuitableDeviceError, chosenDevice};
 }
 
-VulkanInstance::~VulkanInstance() {
+Instance::~Instance() {
 #if defined(VKRT_DEBUG)
     mInstanceHandle.destroyDebugUtilsMessengerEXT(mDebugMessenger, nullptr, mDynamicDispatcher);
 #endif
