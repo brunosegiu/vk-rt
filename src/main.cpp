@@ -1,9 +1,13 @@
 #include "Device.h"
+#include "Window.h"
 
 int main() {
     using namespace VKRT;
-    auto [result, device] = Device::Create();
+    Window* window = new Window();
+    auto [result, device] = Device::Create(window);
+    window->ProcessEvents();
     if (result == Result::Success) {
         device->Release();
     }
+    window->Release();
 }

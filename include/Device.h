@@ -5,6 +5,7 @@
 #include "Result.h"
 #include "VulkanBase.h"
 #include "VulkanBuffer.h"
+#include "Window.h"
 
 namespace VKRT {
 
@@ -12,7 +13,7 @@ class VulkanInstance;
 
 class Device : public RefCountPtr {
 public:
-    static ResultValue<Device*> Create();
+    static ResultValue<Device*> Create(Window* window);
 
     Device(const std::shared_ptr<VulkanInstance>& instance, vk::PhysicalDevice physicalDevice);
 

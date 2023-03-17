@@ -9,8 +9,8 @@
 
 namespace VKRT {
 
-ResultValue<Device*> Device::Create() {
-    const auto instanceResult = VulkanInstance::Create();
+ResultValue<Device*> Device::Create(Window* window) {
+    const auto instanceResult = VulkanInstance::Create(window);
     if (instanceResult.result == Result::Success) {
         const auto instance = instanceResult.value;
         return VulkanInstance::CreateDevice(instance);

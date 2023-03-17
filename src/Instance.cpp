@@ -19,7 +19,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 }
 #endif
 
-ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create() {
+ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create(Window* window) {
     const vk::ApplicationInfo appInfo = vk::ApplicationInfo()
                                             .setPApplicationName("VKRT")
                                             .setApplicationVersion(VK_MAKE_VERSION(0, 0, 1))
@@ -37,6 +37,11 @@ ResultValue<std::shared_ptr<VulkanInstance>> VulkanInstance::Create() {
         VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
     };
+
+    std::vector<std::string> requiredWindowExtensions = window->GetRequiredVulkanExtensions();
+    for (const std::string& requiredWindowExtension : requiredWindowExtensions) {
+        extensionsToEnable.push_back(requiredWindowExtension.c_str());
+    }
 
 #if defined(VKRT_DEBUG)
     {
