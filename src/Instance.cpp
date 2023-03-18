@@ -33,7 +33,10 @@ ResultValue<Instance*> Instance::Create(Window* window) {
 #endif
     };
 
-    std::vector<const char*> extensionsToEnable{VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
+    std::vector<const char*> extensionsToEnable{
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
 
     std::vector<std::string> requiredWindowExtensions = window->GetRequiredVulkanExtensions();
     for (const std::string& requiredWindowExtension : requiredWindowExtensions) {
@@ -122,6 +125,18 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
         }
     }
     return {chosenDeviceScore > 0 ? Result::Success : Result::NoSuitableDeviceError, chosenDevice};
+}
+
+vk::SurfaceKHR Instance::CreateSurface(Window* window) {
+#ifdef VKRT_PLATFORM_WINDOWS
+    vk::Win32SurfaceCreateInfoKHR surfaceCreateInfo =
+        vk::Win32SurfaceCreateInfoKHR().setHwnd(reinterpret_cast<HWND>(window->GetWindowOSHandle())).setHinstance(GetModuleHandle(nullptr));
+    return VKRT_ASSERT_VK(mInstanceHandle.createWin32SurfaceKHR(surfaceCreateInfo));
+#endif
+}
+
+void Instance::DestroySurface(vk::SurfaceKHR surface) {
+    mInstanceHandle.destroySurfaceKHR(surface);
 }
 
 Instance::~Instance() {

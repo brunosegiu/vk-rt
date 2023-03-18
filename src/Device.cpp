@@ -33,7 +33,7 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mPhysica
     const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo().setQueueCreateInfos(queueCreateInfo);
     mLogicalDevice = VKRT_ASSERT_VK(mPhysicalDevice.createDevice(deviceCreateInfo));
 
-    mComputeQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);
+    mGraphicsQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);
 
     const vk::CommandPoolCreateInfo commandPoolCreateInfo =
         vk::CommandPoolCreateInfo().setQueueFamilyIndex(queueFamilyIndex).setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -69,7 +69,7 @@ vk::CommandBuffer Device::CreateCommandBuffer() {
 
 void Device::SubmitCommand(const vk::CommandBuffer& commandBuffer, const vk::Fence& fence) {
     const vk::SubmitInfo submitInfo = vk::SubmitInfo().setCommandBuffers(commandBuffer);
-    VKRT_ASSERT_VK(mComputeQueue.submit(submitInfo, fence));
+    VKRT_ASSERT_VK(mGraphicsQueue.submit(submitInfo, fence));
 }
 
 void Device::DestroyCommand(vk::CommandBuffer& commandBuffer) {
@@ -87,6 +87,15 @@ void Device::WaitForFence(vk::Fence& fence) {
 
 void Device::DestroyFence(vk::Fence& fence) {
     mLogicalDevice.destroyFence(fence);
+}
+
+Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR surface) {
+    SwapchainCapabilities capabilities {
+        .surfaceCapabilities = VKRT_ASSERT_VK(mPhysicalDevice.getSurfaceCapabilitiesKHR(surface)),
+        .supportedFormats = VKRT_ASSERT_VK(mPhysicalDevice.getSurfaceFormatsKHR(surface)),
+        .supportedPresentModes = VKRT_ASSERT_VK(mPhysicalDevice.getSurfacePresentModesKHR(surface)),
+    };
+    return capabilities;
 }
 
 Device::~Device() {

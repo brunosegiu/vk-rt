@@ -31,13 +31,20 @@ public:
     void DestroyFence(vk::Fence& fence);
 
     vk::Device& GetLogicalDevice() { return mLogicalDevice; }
+    
+    struct SwapchainCapabilities {
+        vk::SurfaceCapabilitiesKHR surfaceCapabilities;
+        std::vector<vk::SurfaceFormatKHR> supportedFormats;
+        std::vector<vk::PresentModeKHR> supportedPresentModes;
+    };
+    SwapchainCapabilities GetSwapchainCapabilities(vk::SurfaceKHR surface);
 
     ~Device();
 
 private:
     vk::PhysicalDevice mPhysicalDevice;
     vk::Device mLogicalDevice;
-    vk::Queue mComputeQueue;
+    vk::Queue mGraphicsQueue;
     vk::CommandPool mCommandPool;
 };
 

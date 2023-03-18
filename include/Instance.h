@@ -14,6 +14,9 @@ public:
 
     ResultValue<vk::PhysicalDevice> FindSuitablePhysicalDevice();
 
+    vk::SurfaceKHR CreateSurface(Window* window);
+    void DestroySurface(vk::SurfaceKHR surface);
+
     ~Instance();
 
 private:

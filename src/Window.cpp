@@ -2,6 +2,11 @@
 
 #include <GLFW/glfw3.h>
 
+#ifdef VKRT_PLATFORM_WINDOWS
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#endif
+
 namespace VKRT {
 
 ResultValue<Window*> Window::Create() {
@@ -31,6 +36,18 @@ std::vector<std::string> Window::GetRequiredVulkanExtensions() {
         result.push_back(requiredExtensionNames[extIndex]);
     }
     return result;
+}
+
+void* Window::GetWindowOSHandle() {
+#ifdef VKRT_PLATFORM_WINDOWS
+    return glfwGetWin32Window(mNativeHandle);
+#endif
+}
+
+Window::Size2D Window::GetSize() {
+    Size2D size;
+    glfwGetFramebufferSize(mNativeHandle, reinterpret_cast<int*>(&size.width), reinterpret_cast<int*>(&size.height));
+    return size;
 }
 
 Window::~Window() {

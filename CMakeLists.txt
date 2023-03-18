@@ -28,6 +28,7 @@ set(HEADERS
     include/VulkanBuffer.h
     include/Window.h
     include/Context.h
+    include/Swapchain.h
 )
 
 set(SOURCE
@@ -39,6 +40,7 @@ set(SOURCE
     src/main.cpp
     src/Window.cpp
     src/Context.cpp
+    src/Swapchain.cpp
 )
 
 set(SHADERS
@@ -55,6 +57,7 @@ if(MSVC)
 elseif(LINUX)
     add_compile_definitions(VKRT_PLATFORM_LINUX)
 endif()
+add_compile_definitions(NOMINMAX)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 

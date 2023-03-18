@@ -7,4 +7,9 @@
 #else
 #define VULKAN_HPP_ASSERT(condition)
 #endif
+
+#ifdef VKRT_PLATFORM_WINDOWS
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
 #include <vulkan/vulkan.hpp>

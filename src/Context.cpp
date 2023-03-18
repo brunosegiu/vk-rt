@@ -12,8 +12,10 @@ ResultValue<Context*> Context::Create(Window* window) {
             return {Result::Success, new Context(window, instance, device)};
         } else {
             instance->Release();
+            return {deviceResult, nullptr};
         }
     }
+    return {instanceResult, nullptr};
 }
 
 Context::Context(Window* window, Instance* instance, Device* device) {
@@ -21,6 +23,7 @@ Context::Context(Window* window, Instance* instance, Device* device) {
     mWindow = window;
     mInstance = instance;
     mDevice = device;
+    mSwapchain = new Swapchain(this);
 }
 
 Context::~Context() {
