@@ -12,12 +12,19 @@ namespace VKRT {
 Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     uint32_t actualId = 0;
     switch (resourceId) {
-        case Resource::Id::GenerateShader:
-            actualId = VKRT_RESOURCE_COMPUTE_SHADER;
+        case Resource::Id::GenShader:
+            actualId = VKRT_RESOURCE_RAYTRACE_GEN_SHADER;
+            break;
+        case Resource::Id::HitShader:
+            actualId = VKRT_RESOURCE_RAYTRACE_HIT_SHADER;
+            break;
+        case Resource::Id::MissShader:
+            actualId = VKRT_RESOURCE_RAYTRACE_MISS_SHADER;
             break;
         default:
             return {nullptr, 0};
     }
+
     HMODULE module = nullptr;
     GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&ResourceLoader::Load, &module);
     HRSRC resource = FindResource(module, MAKEINTRESOURCE(actualId), RT_RCDATA);

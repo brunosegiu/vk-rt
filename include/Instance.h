@@ -17,6 +17,8 @@ public:
     vk::SurfaceKHR CreateSurface(Window* window);
     void DestroySurface(vk::SurfaceKHR surface);
 
+    vk::DispatchLoaderDynamic& GetDispatcher() { return mDynamicDispatcher; }
+
     ~Instance();
 
 private:

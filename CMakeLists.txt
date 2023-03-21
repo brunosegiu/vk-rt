@@ -29,6 +29,7 @@ set(HEADERS
     include/Window.h
     include/Context.h
     include/Swapchain.h
+    include/RayTracingPipeline.h
 )
 
 set(SOURCE
@@ -41,10 +42,13 @@ set(SOURCE
     src/Window.cpp
     src/Context.cpp
     src/Swapchain.cpp
+    src/RayTracingPipeline.cpp
 )
 
 set(SHADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/opaque.rgen
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rgen
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rchit
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rmiss
 )
 
 add_executable(${PROJECT_NAME}
@@ -80,15 +84,19 @@ target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 
 # Add shader compilation build step
 set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/Bin/glslc.exe")
-
-set(COMPILED_SHADER "${SHADERS}.spv")
-add_custom_command(
-    OUTPUT ${COMPILED_SHADER}
-    COMMAND ${SHADER_COMPILER_PATH} ${SHADERS} -o ${COMPILED_SHADER}
-    DEPENDS ${SHADERS}
-)
 set(SHADER_DEPENDENCIES "${PROJECT_NAME}Shaders")
-add_custom_target(${SHADER_DEPENDENCIES} DEPENDS ${COMPILED_SHADER})
 add_dependencies(${PROJECT_NAME} ${SHADER_DEPENDENCIES})
+
+foreach(SHADER ${SHADERS})
+    set(COMPILED_SHADER "${SHADER}.spv")
+    list(APPEND COMPILED_SHADERS ${COMPILED_SHADER})
+    add_custom_command(
+        OUTPUT ${COMPILED_SHADER}
+        COMMAND ${SHADER_COMPILER_PATH} ${SHADER} -o ${COMPILED_SHADER}
+        DEPENDS ${SHADER}
+    )
+endforeach()
+
+add_custom_target(${SHADER_DEPENDENCIES} DEPENDS ${COMPILED_SHADERS})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
