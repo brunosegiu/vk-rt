@@ -2,6 +2,7 @@
 
 #include "RefCountPtr.h"
 #include "VulkanBase.h"
+#include "Context.h"
 
 namespace VKRT {
 class Device;
@@ -9,10 +10,11 @@ class Device;
 class VulkanBuffer : public RefCountPtr {
 public:
     static VulkanBuffer* Create(
-        Device* device,
+        Context* context,
         const vk::DeviceSize& size,
         const vk::BufferUsageFlags& usageFlags,
-        const vk::MemoryPropertyFlags& memoryFlags);
+        const vk::MemoryPropertyFlags& memoryFlags,
+        const vk::MemoryAllocateFlags& memoryAllocateFlags);
 
     const vk::DeviceSize& GetBufferSize() const { return mSize; }
     const vk::Buffer& GetBufferHandle() const { return mBufferHandle; }
@@ -21,9 +23,11 @@ public:
     uint8_t* MapBuffer();
     void UnmapBuffer();
 
+    vk::DeviceAddress GetDeviceAddress();
+
 private:
     VulkanBuffer(
-        Device* device,
+        Context* context,
         vk::DeviceSize size,
         vk::Buffer bufferHandle,
         vk::DeviceMemory memoryHandle,
@@ -31,7 +35,7 @@ private:
 
     ~VulkanBuffer() override;
 
-    Device* mDevice;
+    Context* mContext;
     vk::DeviceSize mSize;
     vk::Buffer mBufferHandle;
     vk::DeviceMemory mMemoryHandle;

@@ -6,6 +6,8 @@
 #include "DebugUtils.h"
 #include "Instance.h"
 #include "ResourceLoader.h"
+#include "VulkanBuffer.h"
+#include "Window.h"
 
 namespace VKRT {
 
@@ -17,7 +19,7 @@ ResultValue<Device*> Device::Create(Instance* instance) {
     return {Result::InvalidDeviceError, nullptr};
 }
 
-Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mPhysicalDevice(physicalDevice) {
+Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mContext(nullptr), mPhysicalDevice(physicalDevice) {
     const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = mPhysicalDevice.getQueueFamilyProperties();
     uint32_t queueFamilyIndex = 0;
     for (const auto& properties : queueFamiliesProperties) {
@@ -40,7 +42,15 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mPhysica
     mCommandPool = VKRT_ASSERT_VK(mLogicalDevice.createCommandPool(commandPoolCreateInfo));
 }
 
-vk::DeviceMemory Device::AllocateMemory(const vk::MemoryPropertyFlags& memoryFlags, const vk::MemoryRequirements memoryRequirements) {
+void Device::SetContext(Context* context) {
+    mContext = context;
+    mContext->AddRef();
+}
+
+vk::DeviceMemory Device::AllocateMemory(
+    const vk::MemoryPropertyFlags& memoryFlags,
+    const vk::MemoryRequirements memoryRequirements,
+    const vk::MemoryAllocateFlags& memoryAllocateFlags) {
     // Find suitable memory to allocate the buffer in
     const vk::PhysicalDeviceMemoryProperties memoryProperties = mPhysicalDevice.getMemoryProperties();
     uint32_t selectedMemoryIndex = 0;
@@ -52,13 +62,21 @@ vk::DeviceMemory Device::AllocateMemory(const vk::MemoryPropertyFlags& memoryFla
     }
 
     // Allocate memory for the buffer
-    const vk::MemoryAllocateInfo allocateInfo =
-        vk::MemoryAllocateInfo().setAllocationSize(memoryRequirements.size).setMemoryTypeIndex(selectedMemoryIndex);
+    vk::MemoryAllocateFlagsInfo memoryAllocateFlagsInfo = vk::MemoryAllocateFlagsInfo().setFlags(memoryAllocateFlags);
+    vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo().setAllocationSize(memoryRequirements.size).setMemoryTypeIndex(selectedMemoryIndex);
+    if (memoryAllocateFlags != vk::MemoryAllocateFlags()) {
+        allocateInfo.setPNext(&allocateInfo);
+    }
     return VKRT_ASSERT_VK(mLogicalDevice.allocateMemory(allocateInfo));
 }
 
-VulkanBuffer* Device::CreateBuffer(const vk::DeviceSize& size, const vk::BufferUsageFlags& usageFlags, const vk::MemoryPropertyFlags& memoryFlags) {
-    return VulkanBuffer::Create(this, size, usageFlags, memoryFlags);
+VulkanBuffer* Device::CreateBuffer(
+    const vk::DeviceSize& size,
+    const vk::BufferUsageFlags& usageFlags,
+    const vk::MemoryPropertyFlags& memoryFlags,
+    const vk::MemoryAllocateFlags& memoryAllocateFlags) {
+    VKRT_ASSERT(mContext != nullptr);
+    return VulkanBuffer::Create(mContext, size, usageFlags, memoryFlags, memoryAllocateFlags);
 }
 
 vk::CommandBuffer Device::CreateCommandBuffer() {
@@ -70,6 +88,13 @@ vk::CommandBuffer Device::CreateCommandBuffer() {
 void Device::SubmitCommand(const vk::CommandBuffer& commandBuffer, const vk::Fence& fence) {
     const vk::SubmitInfo submitInfo = vk::SubmitInfo().setCommandBuffers(commandBuffer);
     VKRT_ASSERT_VK(mGraphicsQueue.submit(submitInfo, fence));
+}
+
+void Device::SubmitCommandAndFlush(const vk::CommandBuffer& commandBuffer) {
+    vk::Fence fence = CreateFence();
+    SubmitCommand(commandBuffer, fence);
+    WaitForFence(fence);
+    DestroyFence(fence);
 }
 
 void Device::DestroyCommand(vk::CommandBuffer& commandBuffer) {
@@ -90,7 +115,7 @@ void Device::DestroyFence(vk::Fence& fence) {
 }
 
 Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR surface) {
-    SwapchainCapabilities capabilities {
+    SwapchainCapabilities capabilities{
         .surfaceCapabilities = VKRT_ASSERT_VK(mPhysicalDevice.getSurfaceCapabilitiesKHR(surface)),
         .supportedFormats = VKRT_ASSERT_VK(mPhysicalDevice.getSurfaceFormatsKHR(surface)),
         .supportedPresentModes = VKRT_ASSERT_VK(mPhysicalDevice.getSurfacePresentModesKHR(surface)),
@@ -101,6 +126,9 @@ Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR su
 Device::~Device() {
     mLogicalDevice.destroyCommandPool(mCommandPool);
     mLogicalDevice.destroy();
+    if (mContext != nullptr) {
+        mContext->Release();
+    }
 }
 
 }  // namespace VKRT

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Macros.h"
+#include "RefCountPtr.h"
 #include "ResourceLoader.h"
 #include "VulkanBase.h"
 
@@ -11,7 +12,7 @@ namespace VKRT {
 
 class Context;
 
-class RayTracingPipeline {
+class RayTracingPipeline : public RefCountPtr {
 public:
     RayTracingPipeline(Context* context);
 

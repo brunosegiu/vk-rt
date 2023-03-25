@@ -30,6 +30,8 @@ set(HEADERS
     include/Context.h
     include/Swapchain.h
     include/RayTracingPipeline.h
+    include/Scene.h
+    include/Model.h
 )
 
 set(SOURCE
@@ -43,6 +45,8 @@ set(SOURCE
     src/Context.cpp
     src/Swapchain.cpp
     src/RayTracingPipeline.cpp
+    src/Scene.cpp
+    src/Model.cpp
 )
 
 set(SHADERS
