@@ -32,7 +32,19 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mContext
     const std::vector<float> queuePriorities{1.0f};
     vk::DeviceQueueCreateInfo queueCreateInfo = vk::DeviceQueueCreateInfo().setQueueFamilyIndex(queueFamilyIndex).setQueuePriorities(queuePriorities);
 
-    const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo().setQueueCreateInfos(queueCreateInfo);
+    vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures =
+        vk::PhysicalDeviceBufferDeviceAddressFeatures().setBufferDeviceAddress(true);
+
+    vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures =
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true).setPNext(&bufferDeviceAddressFeatures);
+
+    vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures =
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR().setAccelerationStructure(true).setPNext(&rayTracingFeatures);
+
+    const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
+                                                      .setQueueCreateInfos(queueCreateInfo)
+                                                      .setPNext(&accelerationStructureFeatures)
+                                                      .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions);
     mLogicalDevice = VKRT_ASSERT_VK(mPhysicalDevice.createDevice(deviceCreateInfo));
 
     mGraphicsQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);
@@ -40,6 +52,8 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mContext
     const vk::CommandPoolCreateInfo commandPoolCreateInfo =
         vk::CommandPoolCreateInfo().setQueueFamilyIndex(queueFamilyIndex).setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
     mCommandPool = VKRT_ASSERT_VK(mLogicalDevice.createCommandPool(commandPoolCreateInfo));
+
+    mDispatcher = vk::DispatchLoaderDynamic(instance->GetHandle(), vkGetInstanceProcAddr, mLogicalDevice, vkGetDeviceProcAddr);
 }
 
 void Device::SetContext(Context* context) {
@@ -65,7 +79,7 @@ vk::DeviceMemory Device::AllocateMemory(
     vk::MemoryAllocateFlagsInfo memoryAllocateFlagsInfo = vk::MemoryAllocateFlagsInfo().setFlags(memoryAllocateFlags);
     vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo().setAllocationSize(memoryRequirements.size).setMemoryTypeIndex(selectedMemoryIndex);
     if (memoryAllocateFlags != vk::MemoryAllocateFlags()) {
-        allocateInfo.setPNext(&allocateInfo);
+        allocateInfo.setPNext(&memoryAllocateFlagsInfo);
     }
     return VKRT_ASSERT_VK(mLogicalDevice.allocateMemory(allocateInfo));
 }
@@ -121,6 +135,11 @@ Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR su
         .supportedPresentModes = VKRT_ASSERT_VK(mPhysicalDevice.getSurfacePresentModesKHR(surface)),
     };
     return capabilities;
+}
+
+vk::PhysicalDeviceRayTracingPipelinePropertiesKHR Device::GetRayTracingProperties() {
+    auto result = mPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+    return result.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
 }
 
 Device::~Device() {

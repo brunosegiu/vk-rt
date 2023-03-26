@@ -8,7 +8,7 @@ namespace VKRT {
 
 class Object : public RefCountPtr {
 public:
-    Object(Model* model, glm::vec4 transform);
+    Object(Model* model, glm::mat4 transform);
 
     Model* GetModel() { return mModel; }
 
@@ -16,7 +16,7 @@ public:
 
 private:
     Model* mModel;
-    glm::vec4 mTransform;
+    glm::mat4 mTransform;
 };
 
 }  // namespace VKRT

@@ -20,10 +20,12 @@ Window::Window() : mNativeHandle(nullptr) {
     mNativeHandle = glfwCreateWindow(1280, 720, "VKRT", nullptr, nullptr);
 }
 
-void Window::ProcessEvents() {
-    while (!glfwWindowShouldClose(mNativeHandle)) {
+bool Window::ProcessEvents() {
+    if (!glfwWindowShouldClose(mNativeHandle)) {
         glfwPollEvents();
+        return true;
     }
+    return false;
 }
 
 std::vector<std::string> Window::GetRequiredVulkanExtensions() {

@@ -24,7 +24,7 @@ public:
     vk::DeviceMemory AllocateMemory(
         const vk::MemoryPropertyFlags& memoryFlags,
         const vk::MemoryRequirements memoryRequirements,
-        const vk::MemoryAllocateFlags& memoryAllocateFlags);
+        const vk::MemoryAllocateFlags& memoryAllocateFlags = {});
 
     VulkanBuffer* CreateBuffer(
         const vk::DeviceSize& size,
@@ -42,6 +42,7 @@ public:
     void DestroyFence(vk::Fence& fence);
 
     vk::Device& GetLogicalDevice() { return mLogicalDevice; }
+    vk::DispatchLoaderDynamic& GetDispatcher() { return mDispatcher; }
 
     struct SwapchainCapabilities {
         vk::SurfaceCapabilitiesKHR surfaceCapabilities;
@@ -49,6 +50,8 @@ public:
         std::vector<vk::PresentModeKHR> supportedPresentModes;
     };
     SwapchainCapabilities GetSwapchainCapabilities(vk::SurfaceKHR surface);
+
+    vk::PhysicalDeviceRayTracingPipelinePropertiesKHR GetRayTracingProperties();
 
     ~Device();
 
@@ -58,6 +61,7 @@ private:
     vk::Device mLogicalDevice;
     vk::Queue mGraphicsQueue;
     vk::CommandPool mCommandPool;
+    vk::DispatchLoaderDynamic mDispatcher;
 };
 
 }  // namespace VKRT

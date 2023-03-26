@@ -15,7 +15,7 @@ Swapchain::Swapchain(Context* context) : mContext(context) {
 
     Device::SwapchainCapabilities swapchainCapabilities = mContext->GetDevice()->GetSwapchainCapabilities(mSurface);
 
-    vk::SurfaceFormatKHR surfaceFormat(vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear);
+    vk::SurfaceFormatKHR surfaceFormat(vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear);
     const bool supportsPreferredFormat =
         std::find(swapchainCapabilities.supportedFormats.begin(), swapchainCapabilities.supportedFormats.end(), surfaceFormat) !=
         swapchainCapabilities.supportedFormats.end();
@@ -77,6 +77,11 @@ Swapchain::Swapchain(Context* context) : mContext(context) {
         vk::ImageView imageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
         mImageViews.emplace_back(imageView);
     }
+}
+
+void Swapchain::AcquireNextImage() {
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+    logicalDevice.acquireNextImageKHR(mSwapchainHandle, std::numeric_limits<uint64_t>::max(), )
 }
 
 Swapchain::~Swapchain() {

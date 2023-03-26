@@ -19,6 +19,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 }
 #endif
 
+const std::vector<const char*> Instance::sRequiredDeviceExtensions{
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+    VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+    VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+    VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
+
 ResultValue<Instance*> Instance::Create(Window* window) {
     const vk::ApplicationInfo appInfo = vk::ApplicationInfo()
                                             .setPApplicationName("VKRT")
@@ -33,10 +43,7 @@ ResultValue<Instance*> Instance::Create(Window* window) {
 #endif
     };
 
-    std::vector<const char*> extensionsToEnable{
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
+    std::vector<const char*> extensionsToEnable{};
 
     std::vector<std::string> requiredWindowExtensions = window->GetRequiredVulkanExtensions();
     for (const std::string& requiredWindowExtension : requiredWindowExtensions) {
@@ -119,6 +126,20 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
                 currentDeviceScore = 0;
             }
         }
+
+        std::vector<vk::ExtensionProperties> deviceExtensions = VKRT_ASSERT_VK(physicalDevice.enumerateDeviceExtensionProperties());
+        bool allExtensionsSupported = true;
+        for (const char* extensionName : sRequiredDeviceExtensions) {
+            const bool isExtensionSupported = std::find_if(deviceExtensions.begin(), deviceExtensions.end(),
+                                                  [&extensionName](const vk::ExtensionProperties& presentExtension) {
+                                                      return std::string(extensionName) == std::string(presentExtension.extensionName.data());
+                }) != deviceExtensions.end();
+            allExtensionsSupported = allExtensionsSupported && isExtensionSupported;
+        }
+        if (!allExtensionsSupported) {
+            chosenDeviceScore = 0;
+        }
+
         if (chosenDeviceScore < currentDeviceScore) {
             chosenDevice = physicalDevice;
             chosenDeviceScore = currentDeviceScore;

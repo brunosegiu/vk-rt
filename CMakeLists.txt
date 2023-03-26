@@ -33,6 +33,7 @@ set(HEADERS
     include/Scene.h
     include/Model.h
     include/Object.h
+    include/Renderer.h
 )
 
 set(SOURCE
@@ -49,6 +50,7 @@ set(SOURCE
     src/Scene.cpp
     src/Model.cpp
     src/Object.cpp
+    src/Renderer.cpp
 )
 
 set(SHADERS
@@ -85,6 +87,8 @@ include_directories(${Vulkan_INCLUDE_DIRS})
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 
+add_compile_definitions(GLM_FORCE_RADIANS)
+add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 

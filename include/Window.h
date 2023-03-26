@@ -14,7 +14,7 @@ public:
 
     Window();
 
-    void ProcessEvents();
+    bool ProcessEvents();
     std::vector<std::string> GetRequiredVulkanExtensions();
 
     void* GetWindowOSHandle();

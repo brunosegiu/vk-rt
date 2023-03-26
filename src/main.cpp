@@ -1,4 +1,6 @@
 #include "Context.h"
+#include "Renderer.h"
+#include "Scene.h"
 #include "Window.h"
 
 int main() {
@@ -6,8 +8,21 @@ int main() {
     auto [windowResult, window] = Window::Create();
     if (windowResult == Result::Success) {
         auto [contextResult, context] = Context::Create(window);
-        window->ProcessEvents();
         if (contextResult == Result::Success) {
+            Scene* scene = new Scene(context);
+            Model* model = new Model(context);
+            Object* object = new Object(model, glm::mat4(1.0f));
+            scene->AddObject(object);
+            scene->Commit();
+
+            Renderer* render = new Renderer(context, scene);
+            while (window->ProcessEvents()) {
+                render->Render();
+            }
+            render->Release();
+            object->Release();
+            model->Release();
+            scene->Release();
             context->Release();
         }
     }

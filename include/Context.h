@@ -21,6 +21,7 @@ public:
     Window* GetWindow() { return mWindow; }
     Instance* GetInstance() { return mInstance; }
     Device* GetDevice() { return mDevice; }
+    Swapchain* GetSwapchain() { return mSwapchain; }
 
     ~Context();
 

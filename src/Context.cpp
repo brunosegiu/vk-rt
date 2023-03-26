@@ -23,6 +23,7 @@ Context::Context(Window* window, Instance* instance, Device* device) {
     mWindow = window;
     mInstance = instance;
     mDevice = device;
+    mDevice->SetContext(this);
     mSwapchain = new Swapchain(this);
 }
 

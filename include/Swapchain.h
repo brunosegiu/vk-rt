@@ -14,6 +14,11 @@ class Swapchain : public RefCountPtr {
 public:
     Swapchain(Context* context);
 
+    vk::Format GetFormat() { return mFormat; }
+    vk::Extent2D GetExtent() { return mExtent; }
+
+    void AcquireNextImage();
+
     ~Swapchain();
 
 private:

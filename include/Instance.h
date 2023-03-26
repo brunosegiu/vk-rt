@@ -17,7 +17,9 @@ public:
     vk::SurfaceKHR CreateSurface(Window* window);
     void DestroySurface(vk::SurfaceKHR surface);
 
-    vk::DispatchLoaderDynamic& GetDispatcher() { return mDynamicDispatcher; }
+    vk::Instance& GetHandle() { return mInstanceHandle; }
+
+    static const std::vector<const char*> sRequiredDeviceExtensions;
 
     ~Instance();
 

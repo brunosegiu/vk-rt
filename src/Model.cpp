@@ -21,7 +21,8 @@ Model::Model(Context* context) : mContext(context) {
         mVertexBuffer = mContext->GetDevice()->CreateBuffer(
             vertexBufferSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* bufferData = mVertexBuffer->MapBuffer();
         std::copy_n(reinterpret_cast<uint8_t*>(vertices.data()), vertexBufferSize, bufferData);
         mVertexBuffer->UnmapBuffer();
@@ -32,7 +33,8 @@ Model::Model(Context* context) : mContext(context) {
         mIndexBuffer = mContext->GetDevice()->CreateBuffer(
             indexBufferSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* bufferData = mIndexBuffer->MapBuffer();
         std::copy_n(reinterpret_cast<uint8_t*>(indices.data()), indexBufferSize, bufferData);
         mIndexBuffer->UnmapBuffer();
@@ -42,7 +44,8 @@ Model::Model(Context* context) : mContext(context) {
         mTransformBuffer = mContext->GetDevice()->CreateBuffer(
             sizeof(vk::TransformMatrixKHR),
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* bufferData = mTransformBuffer->MapBuffer();
         std::copy_n(reinterpret_cast<uint8_t*>(&transformMatrix), sizeof(vk::TransformMatrixKHR), bufferData);
         mTransformBuffer->UnmapBuffer();
@@ -73,7 +76,7 @@ Model::Model(Context* context) : mContext(context) {
         vk::AccelerationStructureBuildTypeKHR::eDevice,
         accelerationStructureBuildGeometryInfo,
         triangleCount,
-        mContext->GetInstance()->GetDispatcher());
+        mContext->GetDevice()->GetDispatcher());
 
     mBLASBuffer = mContext->GetDevice()->CreateBuffer(
         buildSizesInfo.accelerationStructureSize,
@@ -86,7 +89,7 @@ Model::Model(Context* context) : mContext(context) {
                                                                                  .setSize(buildSizesInfo.accelerationStructureSize)
                                                                                  .setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
     mBLAS = VKRT_ASSERT_VK(
-        logicalDevice.createAccelerationStructureKHR(accelerationStructureCreateInfo, nullptr, mContext->GetInstance()->GetDispatcher()));
+        logicalDevice.createAccelerationStructureKHR(accelerationStructureCreateInfo, nullptr, mContext->GetDevice()->GetDispatcher()));
 
     VulkanBuffer* scratchBuffer = mContext->GetDevice()->CreateBuffer(
         buildSizesInfo.buildScratchSize,
@@ -107,23 +110,25 @@ Model::Model(Context* context) : mContext(context) {
         vk::AccelerationStructureBuildRangeInfoKHR().setPrimitiveCount(triangleCount).setPrimitiveOffset(0).setFirstVertex(0).setTransformOffset(0);
 
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
+    VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
     commandBuffer.buildAccelerationStructuresKHR(
         accelerationBuildGeometryInfo,
         &accelerationStructureBuildRangeInfo,
-        mContext->GetInstance()->GetDispatcher());
+        mContext->GetDevice()->GetDispatcher());
+    VKRT_ASSERT_VK(commandBuffer.end());
     mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
 
     vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo =
         vk::AccelerationStructureDeviceAddressInfoKHR().setAccelerationStructure(mBLAS);
-    mBLASAddress = logicalDevice.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo, mContext->GetInstance()->GetDispatcher());
+    mBLASAddress = logicalDevice.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo, mContext->GetDevice()->GetDispatcher());
 
     scratchBuffer->Release();
 }
 
 Model::~Model() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    logicalDevice.destroyAccelerationStructureKHR(mBLAS, nullptr, mContext->GetInstance()->GetDispatcher());
+    logicalDevice.destroyAccelerationStructureKHR(mBLAS, nullptr, mContext->GetDevice()->GetDispatcher());
     mBLASBuffer->Release();
     mTransformBuffer->Release();
     mIndexBuffer->Release();

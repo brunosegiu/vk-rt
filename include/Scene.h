@@ -16,6 +16,7 @@ public:
     Scene(Context* context);
 
     void AddObject(Object* object);
+    const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
     void Commit();
 
@@ -26,6 +27,7 @@ private:
 
     std::vector<Object*> mObjects;
 
+    bool mCommitted;
     VulkanBuffer* mInstanceBuffer;
     VulkanBuffer* mTLASBuffer;
     vk::AccelerationStructureKHR mTLAS;

@@ -4,14 +4,19 @@
 
 namespace VKRT {
 
-Scene::Scene(Context* context) : mContext(context), mObjects(), mInstanceBuffer(nullptr) {
+Scene::Scene(Context* context) : mContext(context), mObjects(), mInstanceBuffer(nullptr), mTLASBuffer(nullptr), mCommitted(false) {
     context->AddRef();
 }
 
-void Scene::AddObject(Object* object) {}
+void Scene::AddObject(Object* object) {
+    VKRT_ASSERT(!mCommitted);
+    mObjects.emplace_back(object);
+}
 
 void Scene::Commit() {
-    if (!mObjects.empty()) {
+    VKRT_ASSERT(!mCommitted);
+    if (!mObjects.empty() && !mCommitted) {
+        mCommitted = true;
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         uint32_t index = 0;
         for (Object* object : mObjects) {
@@ -19,14 +24,13 @@ void Scene::Commit() {
                 std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
                 std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
                 std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f}};
-            vk::AccelerationStructureInstanceKHR accelerationStructureInstance =
-                vk::AccelerationStructureInstanceKHR()
-                    .setTransform(transformMatrix)
-                    .setInstanceCustomIndex(index)
-                    .setAccelerationStructureReference(object->GetModel()->GetBLASAddress())
-                    .setMask(0xFF)
-                    .setInstanceShaderBindingTableRecordOffset(0)
-                    .setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
+            instances.emplace_back(vk::AccelerationStructureInstanceKHR()
+                                       .setTransform(transformMatrix)
+                                       .setInstanceCustomIndex(index)
+                                       .setAccelerationStructureReference(object->GetModel()->GetBLASAddress())
+                                       .setMask(0xFF)
+                                       .setInstanceShaderBindingTableRecordOffset(0)
+                                       .setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable));
             ++index;
         }
 
@@ -34,7 +38,8 @@ void Scene::Commit() {
         mInstanceBuffer = mContext->GetDevice()->CreateBuffer(
             instanceDataSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+            vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* instanceData = mInstanceBuffer->MapBuffer();
         std::copy_n(reinterpret_cast<uint8_t*>(instances.data()), instanceDataSize, instanceData);
         mInstanceBuffer->UnmapBuffer();
@@ -59,7 +64,7 @@ void Scene::Commit() {
             vk::AccelerationStructureBuildTypeKHR::eDevice,
             accelerationStructureBuildGeometryInfo,
             instanceCount,
-            mContext->GetInstance()->GetDispatcher());
+            mContext->GetDevice()->GetDispatcher());
 
         mTLASBuffer = mContext->GetDevice()->CreateBuffer(
             buildSizesInfo.accelerationStructureSize,
@@ -72,7 +77,7 @@ void Scene::Commit() {
                                                                                      .setSize(buildSizesInfo.accelerationStructureSize)
                                                                                      .setType(vk::AccelerationStructureTypeKHR::eTopLevel);
         mTLAS = VKRT_ASSERT_VK(
-            logicalDevice.createAccelerationStructureKHR(accelerationStructureCreateInfo, nullptr, mContext->GetInstance()->GetDispatcher()));
+            logicalDevice.createAccelerationStructureKHR(accelerationStructureCreateInfo, nullptr, mContext->GetDevice()->GetDispatcher()));
 
         VulkanBuffer* scratchBuffer = mContext->GetDevice()->CreateBuffer(
             buildSizesInfo.buildScratchSize,
@@ -95,16 +100,18 @@ void Scene::Commit() {
                                                                                              .setFirstVertex(0)
                                                                                              .setTransformOffset(0);
         vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
+        VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
         commandBuffer.buildAccelerationStructuresKHR(
             accelerationBuildGeometryInfo,
             &accelerationStructureBuildRangeInfo,
-            mContext->GetInstance()->GetDispatcher());
+            mContext->GetDevice()->GetDispatcher());
+        VKRT_ASSERT_VK(commandBuffer.end());
         mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
         mContext->GetDevice()->DestroyCommand(commandBuffer);
 
         vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo =
             vk::AccelerationStructureDeviceAddressInfoKHR().setAccelerationStructure(mTLAS);
-        mTLASAddress = logicalDevice.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo, mContext->GetInstance()->GetDispatcher());
+        mTLASAddress = logicalDevice.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo, mContext->GetDevice()->GetDispatcher());
 
         scratchBuffer->Release();
     }
@@ -112,9 +119,11 @@ void Scene::Commit() {
 
 Scene::~Scene() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    logicalDevice.destroyAccelerationStructureKHR(mTLAS, nullptr, mContext->GetInstance()->GetDispatcher());
-    mTLASBuffer->Release();
-    mInstanceBuffer->Release();
+    if (mCommitted) {
+        logicalDevice.destroyAccelerationStructureKHR(mTLAS, nullptr, mContext->GetDevice()->GetDispatcher());
+        mTLASBuffer->Release();
+        mInstanceBuffer->Release();
+    }
     for (Object* object : mObjects) {
         object->Release();
     }
