@@ -32,6 +32,7 @@ set(HEADERS
     include/RayTracingPipeline.h
     include/Scene.h
     include/Model.h
+    include/Object.h
 )
 
 set(SOURCE
@@ -47,6 +48,7 @@ set(SOURCE
     src/RayTracingPipeline.cpp
     src/Scene.cpp
     src/Model.cpp
+    src/Object.cpp
 )
 
 set(SHADERS

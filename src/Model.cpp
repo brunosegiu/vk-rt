@@ -18,33 +18,33 @@ Model::Model(Context* context) : mContext(context) {
 
     {
         const size_t vertexBufferSize = vertices.size() * sizeof(glm::vec3);
-        mVertexBuffer = context->GetDevice()->CreateBuffer(
+        mVertexBuffer = mContext->GetDevice()->CreateBuffer(
             vertexBufferSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         uint8_t* bufferData = mVertexBuffer->MapBuffer();
-        std::copy_n(bufferData, vertexBufferSize, reinterpret_cast<uint8_t*>(vertices.data()));
+        std::copy_n(reinterpret_cast<uint8_t*>(vertices.data()), vertexBufferSize, bufferData);
         mVertexBuffer->UnmapBuffer();
     }
 
     {
         const size_t indexBufferSize = indices.size() * sizeof(glm::uvec3);
-        mIndexBuffer = context->GetDevice()->CreateBuffer(
+        mIndexBuffer = mContext->GetDevice()->CreateBuffer(
             indexBufferSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         uint8_t* bufferData = mIndexBuffer->MapBuffer();
-        std::copy_n(bufferData, indexBufferSize, reinterpret_cast<uint8_t*>(indices.data()));
+        std::copy_n(reinterpret_cast<uint8_t*>(indices.data()), indexBufferSize, bufferData);
         mIndexBuffer->UnmapBuffer();
     }
 
     {
-        mTransformBuffer = context->GetDevice()->CreateBuffer(
+        mTransformBuffer = mContext->GetDevice()->CreateBuffer(
             sizeof(vk::TransformMatrixKHR),
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
         uint8_t* bufferData = mTransformBuffer->MapBuffer();
-        std::copy_n(bufferData, sizeof(vk::TransformMatrixKHR), reinterpret_cast<uint8_t*>(&transformMatrix));
+        std::copy_n(reinterpret_cast<uint8_t*>(&transformMatrix), sizeof(vk::TransformMatrixKHR), bufferData);
         mTransformBuffer->UnmapBuffer();
     }
 
@@ -68,14 +68,14 @@ Model::Model(Context* context) : mContext(context) {
             .setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace)
             .setGeometries(accelerationStructureGeometry);
 
-    vk::Device& logicalDevice = context->GetDevice()->GetLogicalDevice();
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     vk::AccelerationStructureBuildSizesInfoKHR buildSizesInfo = logicalDevice.getAccelerationStructureBuildSizesKHR(
         vk::AccelerationStructureBuildTypeKHR::eDevice,
         accelerationStructureBuildGeometryInfo,
         triangleCount,
         mContext->GetInstance()->GetDispatcher());
 
-    mBLASBuffer = context->GetDevice()->CreateBuffer(
+    mBLASBuffer = mContext->GetDevice()->CreateBuffer(
         buildSizesInfo.accelerationStructureSize,
         vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -88,7 +88,7 @@ Model::Model(Context* context) : mContext(context) {
     mBLAS = VKRT_ASSERT_VK(
         logicalDevice.createAccelerationStructureKHR(accelerationStructureCreateInfo, nullptr, mContext->GetInstance()->GetDispatcher()));
 
-    VulkanBuffer* scratchBuffer = context->GetDevice()->CreateBuffer(
+    VulkanBuffer* scratchBuffer = mContext->GetDevice()->CreateBuffer(
         buildSizesInfo.buildScratchSize,
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -106,13 +106,13 @@ Model::Model(Context* context) : mContext(context) {
     vk::AccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo =
         vk::AccelerationStructureBuildRangeInfoKHR().setPrimitiveCount(triangleCount).setPrimitiveOffset(0).setFirstVertex(0).setTransformOffset(0);
 
-    vk::CommandBuffer commandBuffer = context->GetDevice()->CreateCommandBuffer();
+    vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
     commandBuffer.buildAccelerationStructuresKHR(
         accelerationBuildGeometryInfo,
         &accelerationStructureBuildRangeInfo,
         mContext->GetInstance()->GetDispatcher());
-    context->GetDevice()->SubmitCommandAndFlush(commandBuffer);
-    context->GetDevice()->DestroyCommand(commandBuffer);
+    mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
+    mContext->GetDevice()->DestroyCommand(commandBuffer);
 
     vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo =
         vk::AccelerationStructureDeviceAddressInfoKHR().setAccelerationStructure(mBLAS);
@@ -121,6 +121,14 @@ Model::Model(Context* context) : mContext(context) {
     scratchBuffer->Release();
 }
 
-Model::~Model() {}
+Model::~Model() {
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+    logicalDevice.destroyAccelerationStructureKHR(mBLAS, nullptr, mContext->GetInstance()->GetDispatcher());
+    mBLASBuffer->Release();
+    mTransformBuffer->Release();
+    mIndexBuffer->Release();
+    mVertexBuffer->Release();
+    mContext->Release();
+}
 
 }  // namespace VKRT

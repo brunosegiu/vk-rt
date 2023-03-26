@@ -11,11 +11,13 @@ class Model : public RefCountPtr {
 public:
     Model(Context* context);
 
+    vk::DeviceAddress GetBLASAddress() { return mBLASAddress; }
+
     ~Model();
 
 private:
     Context* mContext;
-    
+
     VulkanBuffer* mVertexBuffer;
     VulkanBuffer* mIndexBuffer;
     VulkanBuffer* mTransformBuffer;
@@ -24,4 +26,5 @@ private:
     vk::AccelerationStructureKHR mBLAS;
     vk::DeviceAddress mBLASAddress;
 };
+
 }  // namespace VKRT
