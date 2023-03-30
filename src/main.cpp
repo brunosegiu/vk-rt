@@ -10,7 +10,7 @@ int main() {
         auto [contextResult, context] = Context::Create(window);
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
-            Model* model = new Model(context);
+            Model* model = Model::Load(context, "C:/Users/bruno/Desktop/untitled.glb");
             Object* object = new Object(model, glm::mat4(1.0f));
             scene->AddObject(object);
             scene->Commit();

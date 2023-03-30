@@ -1,5 +1,7 @@
 #pragma once
 
+#include "glm/glm.hpp"
+
 #include "Context.h"
 #include "RefCountPtr.h"
 #include "VulkanBase.h"
@@ -9,7 +11,9 @@ namespace VKRT {
 
 class Model : public RefCountPtr {
 public:
-    Model(Context* context);
+    static Model* Load(Context* context, const std::string& path);
+
+    Model(Context* context, const std::vector<glm::vec3>& vertices, const std::vector<glm::uvec3>& indices);
 
     vk::DeviceAddress GetBLASAddress() { return mBLASAddress; }
 
