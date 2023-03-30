@@ -8,12 +8,10 @@
 
 namespace VKRT {
 
-Swapchain::Swapchain(Context* context) : mContext(context) {
+Swapchain::Swapchain(Context* context) : mContext(context), mCurrentImageIndex(0) {
     mContext->AddRef();
 
-    mSurface = mContext->GetInstance()->CreateSurface(mContext->GetWindow());
-
-    Device::SwapchainCapabilities swapchainCapabilities = mContext->GetDevice()->GetSwapchainCapabilities(mSurface);
+    Device::SwapchainCapabilities swapchainCapabilities = mContext->GetDevice()->GetSwapchainCapabilities(mContext->GetSurface());
 
     vk::SurfaceFormatKHR surfaceFormat(vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear);
     const bool supportsPreferredFormat =
@@ -44,20 +42,21 @@ Swapchain::Swapchain(Context* context) : mContext(context) {
 
     uint32_t imageCount = std::clamp<uint32_t>(surfaceCaps.minImageCount + 1, surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
 
-    vk::SwapchainCreateInfoKHR swapchainCreateInfo = vk::SwapchainCreateInfoKHR()
-                                                         .setSurface(mSurface)
-                                                         .setMinImageCount(imageCount)
-                                                         .setImageFormat(surfaceFormat.format)
-                                                         .setImageColorSpace(surfaceFormat.colorSpace)
-                                                         .setImageExtent(surfaceExtent)
-                                                         .setImageArrayLayers(1)
-                                                         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-                                                         .setImageSharingMode(vk::SharingMode::eExclusive)
-                                                         .setPreTransform(surfaceCaps.currentTransform)
-                                                         .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
-                                                         .setPresentMode(presentMode)
-                                                         .setClipped(true)
-                                                         .setOldSwapchain(nullptr);
+    vk::SwapchainCreateInfoKHR swapchainCreateInfo =
+        vk::SwapchainCreateInfoKHR()
+            .setSurface(mContext->GetSurface())
+            .setMinImageCount(imageCount)
+            .setImageFormat(surfaceFormat.format)
+            .setImageColorSpace(surfaceFormat.colorSpace)
+            .setImageExtent(surfaceExtent)
+            .setImageArrayLayers(1)
+            .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst)
+            .setImageSharingMode(vk::SharingMode::eExclusive)
+            .setPreTransform(surfaceCaps.currentTransform)
+            .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+            .setPresentMode(presentMode)
+            .setClipped(true)
+            .setOldSwapchain(nullptr);
 
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     mSwapchainHandle = VKRT_ASSERT_VK(logicalDevice.createSwapchainKHR(swapchainCreateInfo));
@@ -77,20 +76,31 @@ Swapchain::Swapchain(Context* context) : mContext(context) {
         vk::ImageView imageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
         mImageViews.emplace_back(imageView);
     }
+
+    mPresentSemaphore = VKRT_ASSERT_VK(logicalDevice.createSemaphore(vk::SemaphoreCreateInfo{}));
+    mRenderSemaphore = VKRT_ASSERT_VK(logicalDevice.createSemaphore(vk::SemaphoreCreateInfo{}));
 }
 
 void Swapchain::AcquireNextImage() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    logicalDevice.acquireNextImageKHR(mSwapchainHandle, std::numeric_limits<uint64_t>::max(), )
+    mCurrentImageIndex = VKRT_ASSERT_VK(logicalDevice.acquireNextImageKHR(mSwapchainHandle, std::numeric_limits<uint64_t>::max(), mPresentSemaphore));
+}
+
+void Swapchain::Present() {
+    vk::PresentInfoKHR presentInfo =
+        vk::PresentInfoKHR().setSwapchains(mSwapchainHandle).setImageIndices(mCurrentImageIndex).setWaitSemaphores(mRenderSemaphore);
+    const vk::Queue& queue = mContext->GetDevice()->GetQueue();
+    VKRT_ASSERT_VK(queue.presentKHR(presentInfo));
 }
 
 Swapchain::~Swapchain() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+    logicalDevice.destroySemaphore(mRenderSemaphore);
+    logicalDevice.destroySemaphore(mPresentSemaphore);
     for (vk::ImageView& imageView : mImageViews) {
         logicalDevice.destroyImageView(imageView);
     }
     logicalDevice.destroySwapchainKHR(mSwapchainHandle);
-    mContext->GetInstance()->DestroySurface(mSurface);
     mContext->Release();
 }
 }  // namespace VKRT

@@ -10,11 +10,8 @@ Model::Model(Context* context) : mContext(context) {
 
     std::vector<glm::vec3> vertices{{1.0f, 1.0f, 0.0f}, {-1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}};
     std::vector<glm::uvec3> indices{{0, 1, 2}};
-    uint32_t triangleCount = indices.size() / 3;
-    vk::TransformMatrixKHR transformMatrix = std::array<std::array<float, 4>, 3>{
-        std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
-        std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
-        std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f}};
+    uint32_t triangleCount = indices.size();
+    VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
     {
         const size_t vertexBufferSize = vertices.size() * sizeof(glm::vec3);

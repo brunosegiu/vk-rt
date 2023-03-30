@@ -11,22 +11,25 @@
 
 namespace VKRT {
 
-ResultValue<Device*> Device::Create(Instance* instance) {
-    auto [result, physicalDevice] = instance->FindSuitablePhysicalDevice();
+ResultValue<Device*> Device::Create(Instance* instance, const vk::SurfaceKHR& surface) {
+    auto [result, physicalDevice] = instance->FindSuitablePhysicalDevice(surface);
     if (result == Result::Success) {
-        return {Result::Success, new Device(instance, physicalDevice)};
+        return {Result::Success, new Device(instance, physicalDevice, surface)};
     }
     return {Result::InvalidDeviceError, nullptr};
 }
 
-Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice) : mContext(nullptr), mPhysicalDevice(physicalDevice) {
+Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& surface)
+    : mContext(nullptr), mPhysicalDevice(physicalDevice) {
     const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = mPhysicalDevice.getQueueFamilyProperties();
     uint32_t queueFamilyIndex = 0;
     for (const auto& properties : queueFamiliesProperties) {
         if (properties.queueFlags & vk::QueueFlagBits::eGraphics) {
-            break;
+            if (VKRT_ASSERT_VK(physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface))) {
+                break;
+            }
         }
-        queueFamilyIndex += 1;
+        ++queueFamilyIndex;
     }
     VKRT_ASSERT(queueFamilyIndex < static_cast<uint32_t>(queueFamiliesProperties.size()));
     const std::vector<float> queuePriorities{1.0f};

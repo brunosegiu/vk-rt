@@ -16,10 +16,11 @@ class Context : public RefCountPtr {
 public:
     static ResultValue<Context*> Create(Window* window);
 
-    Context(Window* window, Instance* instance, Device* device);
+    Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Device* device);
 
     Window* GetWindow() { return mWindow; }
     Instance* GetInstance() { return mInstance; }
+    const vk::SurfaceKHR& GetSurface() { return mSurface; }
     Device* GetDevice() { return mDevice; }
     Swapchain* GetSwapchain() { return mSwapchain; }
 
@@ -27,6 +28,7 @@ public:
 
 private:
     Window* mWindow;
+    vk::SurfaceKHR mSurface;
     Instance* mInstance;
     Device* mDevice;
     Swapchain* mSwapchain;

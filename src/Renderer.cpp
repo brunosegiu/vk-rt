@@ -75,9 +75,16 @@ void Renderer::CreateUniformBuffer() {
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
     uint8_t* buffer = mUniformBuffer->MapBuffer();
+
+    glm::mat4 view;
+    {
+        glm::vec3 translation = glm::vec3(0.0f, 0.0f, -2.5f);
+        view = glm::translate(glm::mat4(1.0f), translation);
+    }
+
     UniformData cameraMatrices{
-        .viewInverse = glm::inverse(glm::mat4(1.0f)),
-        .projInverse = glm::inverse(glm::perspective(glm::radians(60.0), 1.777, 0.1, 512.0))};
+        .viewInverse = glm::inverse(view),
+        .projInverse = glm::inverse(glm::perspective(glm::radians(90.0), 1.777, 0.01, 1000.0))};
     std::copy_n(reinterpret_cast<uint8_t*>(&cameraMatrices), sizeof(UniformData), buffer);
     mUniformBuffer->UnmapBuffer();
 }
@@ -123,6 +130,138 @@ void Renderer::CreateDescriptors() {
 void Renderer::Render() {
     mContext->GetSwapchain()->AcquireNextImage();
 
+    vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
+
+    {
+        VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
+
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, mPipeline->GetPipelineHandle());
+        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, mPipeline->GetPipelineLayout(), 0, mDescriptorSet, nullptr);
+
+        const vk::Extent2D& imageSize = mContext->GetSwapchain()->GetExtent();
+        const RayTracingPipeline::RayTracingTablesRef& tableRef = mPipeline->GetTablesRef();
+        commandBuffer.traceRaysKHR(
+            tableRef.rayGen,
+            tableRef.rayMiss,
+            tableRef.rayHit,
+            tableRef.callable,
+            imageSize.width,
+            imageSize.height,
+            1,
+            mContext->GetDevice()->GetDispatcher());
+
+        vk::Image& currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
+        const vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+        SetImageLayout(
+            commandBuffer,
+            currentSwapchainImage,
+            vk::ImageLayout::eUndefined,
+            vk::ImageLayout::eTransferDstOptimal,
+            subresourceRange,
+            vk::PipelineStageFlagBits::eAllCommands,
+            vk::PipelineStageFlagBits::eAllCommands);
+
+        SetImageLayout(
+            commandBuffer,
+            mStorageImage,
+            vk::ImageLayout::eGeneral,
+            vk::ImageLayout::eTransferSrcOptimal,
+            subresourceRange,
+            vk::PipelineStageFlagBits::eAllCommands,
+            vk::PipelineStageFlagBits::eAllCommands);
+
+        vk::ImageCopy imageCopyRegion = vk::ImageCopy()
+                                            .setSrcSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                                            .setSrcOffset(vk::Offset3D(0, 0, 0))
+                                            .setDstSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                                            .setDstOffset(vk::Offset3D(0, 0, 0))
+                                            .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
+        commandBuffer.copyImage(
+            mStorageImage,
+            vk::ImageLayout::eTransferSrcOptimal,
+            currentSwapchainImage,
+            vk::ImageLayout::eTransferDstOptimal,
+            imageCopyRegion);
+
+        SetImageLayout(
+            commandBuffer,
+            currentSwapchainImage,
+            vk::ImageLayout::eTransferDstOptimal,
+            vk::ImageLayout::ePresentSrcKHR,
+            subresourceRange,
+            vk::PipelineStageFlagBits::eAllCommands,
+            vk::PipelineStageFlagBits::eAllCommands);
+
+        SetImageLayout(
+            commandBuffer,
+            mStorageImage,
+            vk::ImageLayout::eTransferSrcOptimal,
+            vk::ImageLayout::eGeneral,
+            subresourceRange,
+            vk::PipelineStageFlagBits::eAllCommands,
+            vk::PipelineStageFlagBits::eAllCommands);
+
+        commandBuffer.end();
+    }
+
+    const vk::Queue& queue = mContext->GetDevice()->GetQueue();
+    vk::Fence fence = mContext->GetDevice()->CreateFence();
+    VKRT_ASSERT_VK(queue.submit(
+        vk::SubmitInfo()
+            .setCommandBuffers(commandBuffer)
+            .setWaitSemaphores(mContext->GetSwapchain()->GetPresentSemaphore())
+            .setSignalSemaphores(mContext->GetSwapchain()->GetRenderSemaphore()),
+        fence));
+    mContext->GetDevice()->GetLogicalDevice().waitForFences(fence, true, std::numeric_limits<uint64_t>::max());
+    mContext->GetDevice()->DestroyFence(fence);
+    mContext->GetDevice()->DestroyCommand(commandBuffer);
+
+    mContext->GetSwapchain()->Present();
+}
+
+void Renderer::SetImageLayout(
+    vk::CommandBuffer& commandBuffer,
+    vk::Image& image,
+    vk::ImageLayout oldLayout,
+    vk::ImageLayout newLayout,
+    const vk::ImageSubresourceRange& subresourceRange,
+    vk::PipelineStageFlags srcStageMask,
+    vk::PipelineStageFlags dstStageMask) {
+    vk::ImageMemoryBarrier imageBarrier =
+        vk::ImageMemoryBarrier().setOldLayout(oldLayout).setNewLayout(newLayout).setImage(image).setSubresourceRange(subresourceRange);
+
+    switch (oldLayout) {
+        case vk::ImageLayout::eUndefined:
+            imageBarrier.setSrcAccessMask(vk::AccessFlags{});
+            break;
+        case vk::ImageLayout::ePreinitialized:
+            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eHostWrite);
+            break;
+        case vk::ImageLayout::eColorAttachmentOptimal:
+            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+            break;
+        case vk::ImageLayout::eTransferSrcOptimal:
+            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eTransferRead);
+            break;
+        case vk::ImageLayout::eTransferDstOptimal:
+            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+            break;
+    }
+
+    switch (newLayout) {
+        case vk::ImageLayout::eTransferDstOptimal:
+            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+            break;
+        case vk::ImageLayout::eTransferSrcOptimal:
+            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eTransferRead);
+            break;
+        case vk::ImageLayout::eColorAttachmentOptimal:
+            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+            break;
+    }
+
+    commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, {}, {}, imageBarrier);
 }
 
 Renderer::~Renderer() {

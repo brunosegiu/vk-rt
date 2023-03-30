@@ -12,7 +12,7 @@ public:
 
     Instance(const vk::Instance& instance);
 
-    ResultValue<vk::PhysicalDevice> FindSuitablePhysicalDevice();
+    ResultValue<vk::PhysicalDevice> FindSuitablePhysicalDevice(const vk::SurfaceKHR& surface);
 
     vk::SurfaceKHR CreateSurface(Window* window);
     void DestroySurface(vk::SurfaceKHR surface);

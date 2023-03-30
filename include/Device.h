@@ -14,9 +14,9 @@ class Context;
 
 class Device : public RefCountPtr {
 public:
-    static ResultValue<Device*> Create(Instance* instance);
+    static ResultValue<Device*> Create(Instance* instance, const vk::SurfaceKHR& surface);
 
-    Device(Instance* instance, vk::PhysicalDevice physicalDevice);
+    Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& surface);
 
     void SetContext(Context* context);
 
@@ -43,6 +43,7 @@ public:
 
     vk::Device& GetLogicalDevice() { return mLogicalDevice; }
     vk::DispatchLoaderDynamic& GetDispatcher() { return mDispatcher; }
+    const vk::Queue& GetQueue() { return mGraphicsQueue; }
 
     struct SwapchainCapabilities {
         vk::SurfaceCapabilitiesKHR surfaceCapabilities;

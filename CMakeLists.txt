@@ -92,6 +92,9 @@ add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 
+find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+target_include_directories(${PROJECT_NAME} PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
 # Add shader compilation build step
 set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/Bin/glslc.exe")
 set(SHADER_DEPENDENCIES "${PROJECT_NAME}Shaders")
@@ -102,7 +105,7 @@ foreach(SHADER ${SHADERS})
     list(APPEND COMPILED_SHADERS ${COMPILED_SHADER})
     add_custom_command(
         OUTPUT ${COMPILED_SHADER}
-        COMMAND ${SHADER_COMPILER_PATH} ${SHADER} -o ${COMPILED_SHADER}
+        COMMAND ${SHADER_COMPILER_PATH} ${SHADER} -o ${COMPILED_SHADER} --target-env=vulkan1.2
         DEPENDS ${SHADER}
     )
 endforeach()

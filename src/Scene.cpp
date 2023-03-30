@@ -20,10 +20,7 @@ void Scene::Commit() {
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         uint32_t index = 0;
         for (Object* object : mObjects) {
-            vk::TransformMatrixKHR transformMatrix = std::array<std::array<float, 4>, 3>{
-                std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
-                std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
-                std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f}};
+            VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
             instances.emplace_back(vk::AccelerationStructureInstanceKHR()
                                        .setTransform(transformMatrix)
                                        .setInstanceCustomIndex(index)

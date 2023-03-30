@@ -102,7 +102,7 @@ Instance::Instance(const vk::Instance& instance) : mInstanceHandle(instance) {
 #endif
 }
 
-ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
+ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(const vk::SurfaceKHR& surface) {
     const std::vector<vk::PhysicalDevice> physicalDevices = VKRT_ASSERT_VK(mInstanceHandle.enumeratePhysicalDevices());
     vk::PhysicalDevice chosenDevice = nullptr;
     uint32_t chosenDeviceScore = 0;
@@ -118,10 +118,17 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
             }
 
             const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = physicalDevice.getQueueFamilyProperties();
-            const bool hasGraphicsQueue =
-                std::any_of(queueFamiliesProperties.begin(), queueFamiliesProperties.end(), [](const vk::QueueFamilyProperties& properties) -> bool {
-                    return static_cast<bool>(properties.queueFlags & vk::QueueFlagBits::eGraphics);
-                });
+            bool hasGraphicsQueue = false;
+            uint32_t queueFamilyIndex = 0;
+            while (queueFamilyIndex < queueFamiliesProperties.size() && !hasGraphicsQueue) {
+                const vk::QueueFamilyProperties& properties = queueFamiliesProperties[queueFamilyIndex];
+                const bool isGraphicsQueue = static_cast<bool>(properties.queueFlags & vk::QueueFlagBits::eGraphics);
+                if (VKRT_ASSERT_VK(physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface))) {
+                    hasGraphicsQueue = true;
+                } else {
+                    ++queueFamilyIndex;
+                }
+            }
             if (!hasGraphicsQueue) {
                 currentDeviceScore = 0;
             }
@@ -130,9 +137,9 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice() {
         std::vector<vk::ExtensionProperties> deviceExtensions = VKRT_ASSERT_VK(physicalDevice.enumerateDeviceExtensionProperties());
         bool allExtensionsSupported = true;
         for (const char* extensionName : sRequiredDeviceExtensions) {
-            const bool isExtensionSupported = std::find_if(deviceExtensions.begin(), deviceExtensions.end(),
-                                                  [&extensionName](const vk::ExtensionProperties& presentExtension) {
-                                                      return std::string(extensionName) == std::string(presentExtension.extensionName.data());
+            const bool isExtensionSupported =
+                std::find_if(deviceExtensions.begin(), deviceExtensions.end(), [&extensionName](const vk::ExtensionProperties& presentExtension) {
+                    return std::string(extensionName) == std::string(presentExtension.extensionName.data());
                 }) != deviceExtensions.end();
             allExtensionsSupported = allExtensionsSupported && isExtensionSupported;
         }

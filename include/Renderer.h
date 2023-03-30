@@ -1,9 +1,9 @@
 #pragma once
 
-#include "RefCountPtr.h"
 #include "Context.h"
-#include "Scene.h"
 #include "RayTracingPipeline.h"
+#include "RefCountPtr.h"
+#include "Scene.h"
 
 namespace VKRT {
 class Renderer : public RefCountPtr {
@@ -18,6 +18,14 @@ private:
     void CreateStorageImage();
     void CreateUniformBuffer();
     void CreateDescriptors();
+    void SetImageLayout(
+        vk::CommandBuffer& commandBuffer,
+        vk::Image& image,
+        vk::ImageLayout oldLayout,
+        vk::ImageLayout newLayout,
+        const vk::ImageSubresourceRange& subresourceRange,
+        vk::PipelineStageFlags srcStageMask,
+        vk::PipelineStageFlags dstStageMask);
 
     Context* mContext;
     Scene* mScene;

@@ -91,51 +91,66 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         logicalDevice.createRayTracingPipelineKHR({}, {}, rayTracingPipelineCreateInfo, nullptr, mContext->GetDevice()->GetDispatcher()));
 
     vk::PhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingProperties = mContext->GetDevice()->GetRayTracingProperties();
-    const size_t handleSize = rayTracingProperties.shaderGroupHandleSize;
+    mHandleSize = rayTracingProperties.shaderGroupHandleSize;
     const size_t handleAlignment = rayTracingProperties.shaderGroupHandleAlignment;
-    const size_t handleSizeAligned = (handleSize + handleAlignment - 1) & ~(handleAlignment - 1);
+    mHandleSizeAligned = (mHandleSize + handleAlignment - 1) & ~(handleAlignment - 1);
     const uint32_t groupCount = static_cast<uint32_t>(rayTracingGroupCreateInfos.size());
-    const size_t sbtSize = groupCount * handleSizeAligned;
+    const size_t sbtSize = groupCount * mHandleSizeAligned;
 
     std::vector<uint8_t> shaderHandleStorage = VKRT_ASSERT_VK(
         logicalDevice.getRayTracingShaderGroupHandlesKHR<uint8_t>(mPipeline, 0, groupCount, sbtSize, mContext->GetDevice()->GetDispatcher()));
 
     {
         mRayGenTable = mContext->GetDevice()->CreateBuffer(
-            handleSize,
+            mHandleSize,
             vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* rayGenTableData = mRayGenTable->MapBuffer();
-        std::copy_n(shaderHandleStorage.begin(), handleSize, rayGenTableData);
+        std::copy_n(shaderHandleStorage.begin(), mHandleSize, rayGenTableData);
         mRayGenTable->UnmapBuffer();
     }
 
     {
         mRayHitTable = mContext->GetDevice()->CreateBuffer(
-            handleSize,
+            mHandleSize,
             vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* rayHitTableData = mRayHitTable->MapBuffer();
-        std::copy_n(shaderHandleStorage.begin() + handleSizeAligned, handleSize, rayHitTableData);
+        std::copy_n(shaderHandleStorage.begin() + mHandleSizeAligned, mHandleSize, rayHitTableData);
         mRayHitTable->UnmapBuffer();
     }
 
     {
         mRayMissTable = mContext->GetDevice()->CreateBuffer(
-            handleSize,
+            mHandleSize,
             vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
             vk::MemoryAllocateFlagBits::eDeviceAddress);
         uint8_t* rayMissTableData = mRayMissTable->MapBuffer();
-        std::copy_n(shaderHandleStorage.begin() + handleSizeAligned * 2, handleSize, rayMissTableData);
+        std::copy_n(shaderHandleStorage.begin() + mHandleSizeAligned * 2, mHandleSize, rayMissTableData);
         mRayMissTable->UnmapBuffer();
     }
+
+    mTableRef = RayTracingTablesRef{
+        .rayGen = vk::StridedDeviceAddressRegionKHR()
+                      .setDeviceAddress(mRayGenTable->GetDeviceAddress())
+                      .setSize(mHandleSizeAligned)
+                      .setStride(mHandleSizeAligned),
+        .rayHit = vk::StridedDeviceAddressRegionKHR()
+                      .setDeviceAddress(mRayHitTable->GetDeviceAddress())
+                      .setSize(mHandleSizeAligned)
+                      .setStride(mHandleSizeAligned),
+        .rayMiss = vk::StridedDeviceAddressRegionKHR()
+                       .setDeviceAddress(mRayMissTable->GetDeviceAddress())
+                       .setSize(mHandleSizeAligned)
+                       .setStride(mHandleSizeAligned),
+        .callable = vk::StridedDeviceAddressRegionKHR()};
 }
 
 const std::vector<vk::DescriptorPoolSize>& RayTracingPipeline::GetDescriptorSizes() const {
-    static std::vector<vk::DescriptorPoolSize> poolSizes {
+    static std::vector<vk::DescriptorPoolSize> poolSizes{
         vk::DescriptorPoolSize(vk::DescriptorType::eAccelerationStructureKHR, 1),
         vk::DescriptorPoolSize(vk::DescriptorType::eStorageImage, 1),
         vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1),
