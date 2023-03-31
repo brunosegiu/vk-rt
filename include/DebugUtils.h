@@ -12,13 +12,13 @@
 #include <debugapi.h>
 #endif
 
-#ifdef VKRT_PLATFORM_WINDOWS
-#define VKRT_DEBUG_BREAK() __debugbreak()                                                                                                                  \
+#if defined(VKRT_PLATFORM_WINDOWS)
+#define VKRT_DEBUG_BREAK() __debugbreak()
 #elif defined(VKRT_PLATFORM_LINUX)
 #define VKRT_DEBUG_BREAK() __builtin_trap()
 #endif
 
-#ifdef VKRT_PLATFORM_WINDOWS
+#if defined(VKRT_PLATFORM_WINDOWS)
 #define VKRT_LOG(message)                      \
     {                                          \
         std::wostringstream os_;               \
@@ -26,10 +26,8 @@
         OutputDebugStringW(os_.str().c_str()); \
     }
 #elif defined(VKRT_PLATFORM_LINUX)
-#define VKRT_LOG(message)                      \
-    {                                          \
-        std::cout << message << std::endl;     \
-    }
+#define VKRT_LOG(message) \
+    { std::cout << message << std::endl; }
 #endif
 
 #ifdef VKRT_DEBUG
@@ -42,7 +40,7 @@
                 "In file: " << __FILE__ << ", line: " << __LINE__ << " of function: " << __FUNCTION__ << "Condition failed : " << #condition \
                             << std::endl                                                                                                     \
                             << message << std::endl);                                                                                        \
-            VKRT_DEBUG_BREAK();                                                                                                                  \
+            VKRT_DEBUG_BREAK();                                                                                                              \
         }                                                                                                                                    \
     }
 #else

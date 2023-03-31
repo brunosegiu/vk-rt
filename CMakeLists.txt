@@ -24,8 +24,6 @@ set(HEADERS
     include/DebugUtils.h
     include/ResourceLoader.h
     include/VulkanBase.h
-    include/ShaderResources.h
-    include/ShaderResources.rc
     include/Result.h
     include/VulkanBuffer.h
     include/Window.h
@@ -65,14 +63,22 @@ set(SHADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rmiss
 )
 
-set(THIRD_PARTY_LIB
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.cpp
-)
+if(WIN32)
+    set(PLATFORM_SPECIFIC_FILES
+        include/ShaderResources.h
+        include/ShaderResources.rc
+    )
+elseif(UNIX)
+    set(PLATFORM_SPECIFIC_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.c
+    )
+endif()
 
 add_executable(${PROJECT_NAME}
     ${HEADERS}
     ${SOURCE}
+    ${PLATFORM_SPECIFIC_FILES}
 )
 
 if(MSVC)
@@ -109,6 +115,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${TINYGLTF_INCLUDE_DIRS})
 find_package(nlohmann_json CONFIG REQUIRED)
 find_path(NLOHMANN_JSON_INCLUDE nlohmann/json.hpp)
 include_directories(${NLOHMANN_JSON_INCLUDE})
+
+if(UNIX)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin)
+endif()
 
 # Add shader compilation build step
 if(MSVC)

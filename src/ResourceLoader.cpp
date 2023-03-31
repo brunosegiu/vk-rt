@@ -5,12 +5,18 @@
 
 #ifdef VKRT_PLATFORM_WINDOWS
 #include <Windows.h>
+#include "ShaderResources.h"
 #endif
 
 #ifdef VKRT_PLATFORM_LINUX
-#endif
+extern "C" {
+#include "incbin.h"
+}
 
-#include "ShaderResources.h"
+INCBIN(GenShader, "raytrace.rgen.spv");
+INCBIN(HitShader, "raytrace.rchit.spv");
+INCBIN(MissShader, "raytrace.rmiss.spv");
+#endif
 
 namespace VKRT {
 
@@ -46,14 +52,28 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     }
     return {nullptr, 0};
 }
-#elif defined(VKRT_PLATFORM_LINUX)
+#endif
+
+#ifdef VKRT_PLATFORM_LINUX
 Resource ResourceLoader::Load(const Resource::Id& resourceId) {
-        return {nullptr, 0};
+    switch (resourceId) {
+        case Resource::Id::GenShader: {
+            return Resource {}
+        } break;
+        case Resource::Id::HitShader: {
+        } break;
+        case Resource::Id::MissShader: {
+        } break;
+        default:
+            return {nullptr, 0};
+    }
 }
 #endif
 
 void ResourceLoader::CleanUp(Resource& resource) {
+#ifndef VKRT_PLATFORM_LINUX
     delete[] resource.buffer;
+#endif
     resource.buffer = nullptr;
     resource.size = 0;
 }
