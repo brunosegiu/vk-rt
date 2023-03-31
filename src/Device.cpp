@@ -146,6 +146,7 @@ vk::PhysicalDeviceRayTracingPipelinePropertiesKHR Device::GetRayTracingPropertie
 }
 
 Device::~Device() {
+    mLogicalDevice.waitIdle();
     mLogicalDevice.destroyCommandPool(mCommandPool);
     mLogicalDevice.destroy();
     if (mContext != nullptr) {
