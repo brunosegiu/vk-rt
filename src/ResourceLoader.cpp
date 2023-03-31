@@ -3,12 +3,18 @@
 #include <algorithm>
 #include <string>
 
+#ifdef VKRT_PLATFORM_WINDOWS
 #include <Windows.h>
+#endif
+
+#ifdef VKRT_PLATFORM_LINUX
+#endif
 
 #include "ShaderResources.h"
 
 namespace VKRT {
 
+#ifdef VKRT_PLATFORM_WINDOWS
 Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     uint32_t actualId = 0;
     switch (resourceId) {
@@ -40,8 +46,14 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     }
     return {nullptr, 0};
 }
+#elif defined(VKRT_PLATFORM_LINUX)
+Resource ResourceLoader::Load(const Resource::Id& resourceId) {
+        return {nullptr, 0};
+}
+#endif
 
 void ResourceLoader::CleanUp(Resource& resource) {
+    delete[] resource.buffer;
     resource.buffer = nullptr;
     resource.size = 0;
 }

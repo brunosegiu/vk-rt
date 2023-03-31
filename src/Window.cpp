@@ -2,11 +2,6 @@
 
 #include <GLFW/glfw3.h>
 
-#ifdef VKRT_PLATFORM_WINDOWS
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-#endif
-
 #include "Context.h"
 #include "Device.h"
 #include "InputManager.h"
@@ -40,12 +35,6 @@ std::vector<std::string> Window::GetRequiredVulkanExtensions() {
         result.push_back(requiredExtensionNames[extIndex]);
     }
     return result;
-}
-
-void* Window::GetWindowOSHandle() {
-#ifdef VKRT_PLATFORM_WINDOWS
-    return glfwGetWin32Window(mNativeHandle);
-#endif
 }
 
 Window::Size2D Window::GetSize() {

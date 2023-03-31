@@ -21,7 +21,6 @@ public:
     bool Update();
     std::vector<std::string> GetRequiredVulkanExtensions();
 
-    void* GetWindowOSHandle();
     GLFWwindow* GetNativeHandle() { return mNativeHandle; }
     InputManager* GetInputManager() { return mInputManager; }
 

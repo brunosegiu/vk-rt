@@ -1,5 +1,7 @@
 #include "Instance.h"
 
+#include <GLFW/glfw3.h>
+
 #include "DebugUtils.h"
 #include "Device.h"
 
@@ -156,11 +158,9 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(const vk::S
 }
 
 vk::SurfaceKHR Instance::CreateSurface(Window* window) {
-#ifdef VKRT_PLATFORM_WINDOWS
-    vk::Win32SurfaceCreateInfoKHR surfaceCreateInfo =
-        vk::Win32SurfaceCreateInfoKHR().setHwnd(reinterpret_cast<HWND>(window->GetWindowOSHandle())).setHinstance(GetModuleHandle(nullptr));
-    return VKRT_ASSERT_VK(mInstanceHandle.createWin32SurfaceKHR(surfaceCreateInfo));
-#endif
+    VkSurfaceKHR surface;
+    glfwCreateWindowSurface(mInstanceHandle, window->GetNativeHandle(), nullptr, &surface);
+    return surface;
 }
 
 void Instance::DestroySurface(vk::SurfaceKHR surface) {

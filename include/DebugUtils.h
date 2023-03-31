@@ -7,15 +7,30 @@
 #include "Macros.h"
 #include "VulkanBase.h"
 
+#ifdef VKRT_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <debugapi.h>
+#endif
 
+#ifdef VKRT_PLATFORM_WINDOWS
+#define VKRT_DEBUG_BREAK() __debugbreak()                                                                                                                  \
+#elif defined(VKRT_PLATFORM_LINUX)
+#define VKRT_DEBUG_BREAK() __builtin_trap()
+#endif
+
+#ifdef VKRT_PLATFORM_WINDOWS
 #define VKRT_LOG(message)                      \
     {                                          \
         std::wostringstream os_;               \
         os_ << message << std::endl;           \
         OutputDebugStringW(os_.str().c_str()); \
     }
+#elif defined(VKRT_PLATFORM_LINUX)
+#define VKRT_LOG(message)                      \
+    {                                          \
+        std::cout << message << std::endl;     \
+    }
+#endif
 
 #ifdef VKRT_DEBUG
 #define VKRT_ASSERT_MSG(condition, message)                                                                                                  \
@@ -27,7 +42,7 @@
                 "In file: " << __FILE__ << ", line: " << __LINE__ << " of function: " << __FUNCTION__ << "Condition failed : " << #condition \
                             << std::endl                                                                                                     \
                             << message << std::endl);                                                                                        \
-            __debugbreak();                                                                                                                  \
+            VKRT_DEBUG_BREAK();                                                                                                                  \
         }                                                                                                                                    \
     }
 #else

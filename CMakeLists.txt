@@ -1,10 +1,12 @@
-cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
 set(VERSION 1.0)
 set(PROJECT_NAME VK-RT)
 
 if (MSVC)
     set(VCPKG_TARGET_TRIPLET "x64-windows")
+elseif(UNIX)
+    set(VCPKG_TARGET_TRIPLET "x64-linux")
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vcpkg/scripts/buildsystems/vcpkg.cmake")
@@ -63,6 +65,11 @@ set(SHADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rmiss
 )
 
+set(THIRD_PARTY_LIB
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin/incbin.cpp
+)
+
 add_executable(${PROJECT_NAME}
     ${HEADERS}
     ${SOURCE}
@@ -70,7 +77,7 @@ add_executable(${PROJECT_NAME}
 
 if(MSVC)
     add_compile_definitions(VKRT_PLATFORM_WINDOWS)
-elseif(LINUX)
+elseif(UNIX)
     add_compile_definitions(VKRT_PLATFORM_LINUX)
 endif()
 add_compile_definitions(NOMINMAX)
@@ -104,7 +111,11 @@ find_path(NLOHMANN_JSON_INCLUDE nlohmann/json.hpp)
 include_directories(${NLOHMANN_JSON_INCLUDE})
 
 # Add shader compilation build step
-set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/Bin/glslc.exe")
+if(MSVC)
+    set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/Bin/glslc.exe")
+elseif(UNIX)
+    set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/bin/glslc")
+endif()
 set(SHADER_DEPENDENCIES "${PROJECT_NAME}Shaders")
 add_dependencies(${PROJECT_NAME} ${SHADER_DEPENDENCIES})
 
