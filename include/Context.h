@@ -14,8 +14,6 @@
 namespace VKRT {
 class Context : public RefCountPtr {
 public:
-    static ResultValue<Context*> Create(Window* window);
-
     Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Device* device);
 
     Window* GetWindow() { return mWindow; }

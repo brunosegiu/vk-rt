@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Camera.h"
 #include "Context.h"
 #include "RayTracingPipeline.h"
 #include "RefCountPtr.h"
@@ -10,7 +11,7 @@ class Renderer : public RefCountPtr {
 public:
     Renderer(Context* context, Scene* scene);
 
-    void Render();
+    void Render(Camera* camera);
 
     ~Renderer();
 
@@ -26,6 +27,11 @@ private:
         const vk::ImageSubresourceRange& subresourceRange,
         vk::PipelineStageFlags srcStageMask,
         vk::PipelineStageFlags dstStageMask);
+    struct UniformData {
+        glm::mat4 viewInverse;
+        glm::mat4 projInverse;
+    };
+    void UpdateCameraUniforms(Camera* camera);
 
     Context* mContext;
     Scene* mScene;

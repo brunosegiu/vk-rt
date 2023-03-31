@@ -1,7 +1,5 @@
 #include "Renderer.h"
 
-#include "glm/gtc/matrix_transform.hpp"
-
 #include "DebugUtils.h"
 
 namespace VKRT {
@@ -66,25 +64,17 @@ void Renderer::CreateStorageImage() {
 }
 
 void Renderer::CreateUniformBuffer() {
-    struct UniformData {
-        glm::mat4 viewInverse;
-        glm::mat4 projInverse;
-    };
     mUniformBuffer = mContext->GetDevice()->CreateBuffer(
         sizeof(UniformData),
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+}
+
+void Renderer::UpdateCameraUniforms(Camera* camera) {
     uint8_t* buffer = mUniformBuffer->MapBuffer();
-
-    glm::mat4 view;
-    {
-        glm::vec3 translation = glm::vec3(0.0f, 0.0f, -2.5f);
-        view = glm::translate(glm::mat4(1.0f), translation);
-    }
-
     UniformData cameraMatrices{
-        .viewInverse = glm::inverse(view),
-        .projInverse = glm::inverse(glm::perspective(glm::radians(90.0), 1.777, 0.01, 1000.0))};
+        .viewInverse = glm::inverse(camera->GetViewTransform()),
+        .projInverse = glm::inverse(camera->GetProjectionTransform())};
     std::copy_n(reinterpret_cast<uint8_t*>(&cameraMatrices), sizeof(UniformData), buffer);
     mUniformBuffer->UnmapBuffer();
 }
@@ -127,7 +117,9 @@ void Renderer::CreateDescriptors() {
     logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
 }
 
-void Renderer::Render() {
+void Renderer::Render(Camera* camera) {
+    UpdateCameraUniforms(camera);
+
     mContext->GetSwapchain()->AcquireNextImage();
 
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();

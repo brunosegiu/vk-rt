@@ -4,21 +4,6 @@
 
 namespace VKRT {
 
-ResultValue<Context*> Context::Create(Window* window) {
-    auto [instanceResult, instance] = Instance::Create(window);
-    if (instanceResult == Result::Success) {
-        vk::SurfaceKHR surface = instance->CreateSurface(window);
-        auto [deviceResult, device] = Device::Create(instance, surface);
-        if (deviceResult == Result::Success) {
-            return {Result::Success, new Context(window, instance, surface, device)};
-        } else {
-            instance->Release();
-            return {deviceResult, nullptr};
-        }
-    }
-    return {instanceResult, nullptr};
-}
-
 Context::Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Device* device) {
     window->AddRef();
     mWindow = window;

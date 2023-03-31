@@ -8,16 +8,22 @@
 class GLFWwindow;
 
 namespace VKRT {
+
+class Context;
+class InputManager;
+
 class Window : public RefCountPtr {
 public:
     static ResultValue<Window*> Create();
 
     Window();
 
-    bool ProcessEvents();
+    bool Update();
     std::vector<std::string> GetRequiredVulkanExtensions();
 
     void* GetWindowOSHandle();
+    GLFWwindow* GetNativeHandle() { return mNativeHandle; }
+    InputManager* GetInputManager() { return mInputManager; }
 
     struct Size2D {
         uint32_t width;
@@ -25,9 +31,13 @@ public:
     };
     Size2D GetSize();
 
+    ResultValue<Context*> CreateContext();
+
     ~Window();
 
 private:
     GLFWwindow* mNativeHandle;
+    Context* mContext;
+    InputManager* mInputManager;
 };
 }  // namespace VKRT

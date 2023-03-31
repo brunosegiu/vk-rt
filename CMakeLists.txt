@@ -34,6 +34,8 @@ set(HEADERS
     include/Model.h
     include/Object.h
     include/Renderer.h
+    include/Camera.h
+    include/InputManager.h
 )
 
 set(SOURCE
@@ -51,6 +53,8 @@ set(SOURCE
     src/Model.cpp
     src/Object.cpp
     src/Renderer.cpp
+    src/Camera.cpp
+    src/InputManager.cpp
 )
 
 set(SHADERS
