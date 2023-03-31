@@ -71,6 +71,7 @@ ResultValue<Context*> Window::CreateContext() {
         }
         return {instanceResult, nullptr};
     }
+    return {Result::Success, mContext};
 }
 
 Window::~Window() {

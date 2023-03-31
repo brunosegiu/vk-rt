@@ -194,7 +194,7 @@ void Renderer::Render(Camera* camera) {
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        commandBuffer.end();
+        VKRT_ASSERT_VK(commandBuffer.end());
     }
 
     const vk::Queue& queue = mContext->GetDevice()->GetQueue();
@@ -205,7 +205,7 @@ void Renderer::Render(Camera* camera) {
             .setWaitSemaphores(mContext->GetSwapchain()->GetPresentSemaphore())
             .setSignalSemaphores(mContext->GetSwapchain()->GetRenderSemaphore()),
         fence));
-    mContext->GetDevice()->GetLogicalDevice().waitForFences(fence, true, std::numeric_limits<uint64_t>::max());
+    VKRT_ASSERT_VK(mContext->GetDevice()->GetLogicalDevice().waitForFences(fence, true, std::numeric_limits<uint64_t>::max()));
     mContext->GetDevice()->DestroyFence(fence);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
 

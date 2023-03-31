@@ -90,8 +90,7 @@ void Camera::OnKeyReleased(int key) {
 
 void Camera::OnMouseMoved(glm::vec2 newPos) {
     if (mActive) {
-        glm::vec2 deltaPos = mCurrentMousePos - newPos;
-        Rotate(glm::vec3(deltaPos.y * 100.0, -deltaPos.x * 100.0, 0.0f));
+        Rotate(glm::vec3(newPos.y * 100.0, -newPos.x * 100.0, 0.0f));
     }
 }
 

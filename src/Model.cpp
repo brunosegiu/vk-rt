@@ -35,7 +35,7 @@ Model* Model::Load(Context* context, const std::string& path) {
                 const uint32_t positionCount = static_cast<uint32_t>(positionAccessor.count);
                 for (uint32_t positionIndex = 0; positionIndex < positionCount; ++positionIndex) {
                     const float* positionDataFloat = reinterpret_cast<const float*>(&positionData[vetexStride * positionIndex]);
-                    positions[positionIndex] = glm::vec3(positionDataFloat[0], positionDataFloat[1], positionDataFloat[2]);
+                    positions[positionIndex] = glm::vec3(positionDataFloat[0], -positionDataFloat[1], positionDataFloat[2]);
                 }
             }
 
