@@ -13,9 +13,12 @@ extern "C" {
 #include "incbin.h"
 }
 
+namespace VKRT
+{
 INCBIN(GenShader, "raytrace.rgen.spv");
 INCBIN(HitShader, "raytrace.rchit.spv");
 INCBIN(MissShader, "raytrace.rmiss.spv");
+}
 #endif
 
 namespace VKRT {
@@ -58,11 +61,22 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
 Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     switch (resourceId) {
         case Resource::Id::GenShader: {
-            return Resource {}
+            return Resource {
+                .buffer = gGenShaderData, 
+                .size = gGenShaderSize
+            };
         } break;
         case Resource::Id::HitShader: {
+            return Resource {
+                .buffer = gHitShaderData, 
+                .size = gHitShaderSize
+            };
         } break;
         case Resource::Id::MissShader: {
+            return Resource {
+                .buffer = gMissShaderData, 
+                .size = gMissShaderSize
+            };
         } break;
         default:
             return {nullptr, 0};

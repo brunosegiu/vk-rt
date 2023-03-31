@@ -57,10 +57,12 @@ set(SOURCE
     src/InputManager.cpp
 )
 
+set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+
 set(SHADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rgen
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rchit
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/raytrace.rmiss
+    raytrace.rgen
+    raytrace.rchit
+    raytrace.rmiss
 )
 
 if(WIN32)
@@ -131,14 +133,27 @@ add_dependencies(${PROJECT_NAME} ${SHADER_DEPENDENCIES})
 
 foreach(SHADER ${SHADERS})
     set(COMPILED_SHADER "${SHADER}.spv")
-    list(APPEND COMPILED_SHADERS ${COMPILED_SHADER})
+    set(SRC_SHADER_PATH "${SHADER_SRC_DIR}/${SHADER}")
+    set(COMPILED_SHADER_PATH "${SHADER_SRC_DIR}/${COMPILED_SHADER}")
+    list(APPEND COMPILED_SHADERS ${COMPILED_SHADER_PATH})
     add_custom_command(
         OUTPUT ${COMPILED_SHADER}
-        COMMAND ${SHADER_COMPILER_PATH} ${SHADER} -o ${COMPILED_SHADER} --target-env=vulkan1.2
-        DEPENDS ${SHADER}
+        COMMAND ${SHADER_COMPILER_PATH} ${SRC_SHADER_PATH} -o ${COMPILED_SHADER_PATH} --target-env=vulkan1.2
+        DEPENDS ${SRC_SHADER_PATH}
     )
+
 endforeach()
 
 add_custom_target(${SHADER_DEPENDENCIES} DEPENDS ${COMPILED_SHADERS})
+
+foreach(SHADER ${SHADERS})
+    set(COMPILED_SHADER "${SHADER}.spv")
+    set(COMPILED_SHADER_PATH "${SHADER_SRC_DIR}/${COMPILED_SHADER}")
+    add_custom_command(
+        TARGET ${SHADER_DEPENDENCIES} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${COMPILED_SHADER_PATH}
+                ${CMAKE_CURRENT_BINARY_DIR}/${COMPILED_SHADER})
+endforeach()
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
