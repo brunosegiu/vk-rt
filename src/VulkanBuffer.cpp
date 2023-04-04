@@ -12,16 +12,21 @@ VulkanBuffer* VulkanBuffer::Create(
     const vk::MemoryPropertyFlags& memoryFlags,
     const vk::MemoryAllocateFlags& memoryAllocateFlags) {
     const vk::Device& logicalDevice = context->GetDevice()->GetLogicalDevice();
-    const vk::BufferCreateInfo bufferCreateInfo =
-        vk::BufferCreateInfo().setSize(size).setUsage(usageFlags).setSharingMode(vk::SharingMode::eExclusive);
+    const vk::BufferCreateInfo bufferCreateInfo = vk::BufferCreateInfo()
+                                                      .setSize(size)
+                                                      .setUsage(usageFlags)
+                                                      .setSharingMode(vk::SharingMode::eExclusive);
     const vk::Buffer bufferHandle = VKRT_ASSERT_VK(logicalDevice.createBuffer(bufferCreateInfo));
 
-    const vk::MemoryRequirements memoryRequirements = logicalDevice.getBufferMemoryRequirements(bufferHandle);
-    const vk::DeviceMemory memoryHandle = context->GetDevice()->AllocateMemory(memoryFlags, memoryRequirements, memoryAllocateFlags);
+    const vk::MemoryRequirements memoryRequirements =
+        logicalDevice.getBufferMemoryRequirements(bufferHandle);
+    const vk::DeviceMemory memoryHandle =
+        context->GetDevice()->AllocateMemory(memoryFlags, memoryRequirements, memoryAllocateFlags);
 
     VKRT_ASSERT_VK(logicalDevice.bindBufferMemory(bufferHandle, memoryHandle, 0));
 
-    const vk::DescriptorBufferInfo bufferInfo = vk::DescriptorBufferInfo().setBuffer(bufferHandle).setOffset(0).setRange(size);
+    const vk::DescriptorBufferInfo bufferInfo =
+        vk::DescriptorBufferInfo().setBuffer(bufferHandle).setOffset(0).setRange(size);
 
     return new VulkanBuffer(context, size, bufferHandle, memoryHandle, bufferInfo);
 }
@@ -32,7 +37,11 @@ VulkanBuffer::VulkanBuffer(
     vk::Buffer bufferHandle,
     vk::DeviceMemory memoryHandle,
     vk::DescriptorBufferInfo descriptorInfo)
-    : mContext(context), mSize(size), mBufferHandle(bufferHandle), mMemoryHandle(memoryHandle), mDescriptorInfo(descriptorInfo) {
+    : mContext(context),
+      mSize(size),
+      mBufferHandle(bufferHandle),
+      mMemoryHandle(memoryHandle),
+      mDescriptorInfo(descriptorInfo) {
     mContext->AddRef();
 }
 
@@ -48,7 +57,8 @@ void VulkanBuffer::UnmapBuffer() {
 
 vk::DeviceAddress VulkanBuffer::GetDeviceAddress() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    vk::BufferDeviceAddressInfoKHR bufferAddressInfo = vk::BufferDeviceAddressInfoKHR().setBuffer(mBufferHandle);
+    vk::BufferDeviceAddressInfoKHR bufferAddressInfo =
+        vk::BufferDeviceAddressInfoKHR().setBuffer(mBufferHandle);
     return logicalDevice.getBufferAddress(bufferAddressInfo);
 }
 

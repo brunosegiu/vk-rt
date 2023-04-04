@@ -5,14 +5,19 @@
 namespace VKRT {
 InputManager::InputManager(Window* window) : mWindow(window) {
     glfwSetWindowUserPointer(mWindow->GetNativeHandle(), this);
-#define BIND_GLWFW_CALLBACK(function)                                                                     \
-    [](GLFWwindow* window, auto... args) {                                                                \
-        VKRT::InputManager* manager = static_cast<VKRT::InputManager*>(glfwGetWindowUserPointer(window)); \
-        manager->function(args...);                                                                       \
+#define BIND_GLWFW_CALLBACK(function)                                           \
+    [](GLFWwindow* window, auto... args) {                                      \
+        VKRT::InputManager* manager =                                           \
+            static_cast<VKRT::InputManager*>(glfwGetWindowUserPointer(window)); \
+        manager->function(args...);                                             \
     }
     glfwSetKeyCallback(mWindow->GetNativeHandle(), BIND_GLWFW_CALLBACK(InputManager::KeyCallback));
-    glfwSetCursorPosCallback(mWindow->GetNativeHandle(), BIND_GLWFW_CALLBACK(InputManager::CursorPosCallback));
-    glfwSetMouseButtonCallback(mWindow->GetNativeHandle(), BIND_GLWFW_CALLBACK(InputManager::MouseButtonCallback));
+    glfwSetCursorPosCallback(
+        mWindow->GetNativeHandle(),
+        BIND_GLWFW_CALLBACK(InputManager::CursorPosCallback));
+    glfwSetMouseButtonCallback(
+        mWindow->GetNativeHandle(),
+        BIND_GLWFW_CALLBACK(InputManager::MouseButtonCallback));
 
     if (glfwRawMouseMotionSupported()) {
         glfwSetInputMode(mWindow->GetNativeHandle(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
@@ -58,7 +63,9 @@ void InputManager::KeyCallback(int key, int scancode, int action, int mods) {
 
 void InputManager::CursorPosCallback(double xpos, double ypos) {
     auto windowSize = mWindow->GetSize();
-    const glm::vec2 normalizedCoordinates = glm::vec2(xpos / static_cast<double>(windowSize.width), ypos / static_cast<double>(windowSize.height));
+    const glm::vec2 normalizedCoordinates = glm::vec2(
+        xpos / static_cast<double>(windowSize.width),
+        ypos / static_cast<double>(windowSize.height));
     for (InputEventListener* listener : mEventListeners) {
         listener->OnMouseMoved(normalizedCoordinates);
     }

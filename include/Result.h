@@ -6,10 +6,6 @@ namespace VKRT {
 
 enum class Result {
     Success,
-    InvalidInputFormatError,
-    InvalidOutputFormatError,
-    InvalidInputResolutionError,
-    InvalidOutputResolutionError,
     DriverNotFoundError,
     InvalidDeviceError,
     NoSuitableDeviceError,

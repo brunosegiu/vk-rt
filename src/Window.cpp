@@ -39,7 +39,10 @@ std::vector<std::string> Window::GetRequiredVulkanExtensions() {
 
 Window::Size2D Window::GetSize() {
     Size2D size;
-    glfwGetFramebufferSize(mNativeHandle, reinterpret_cast<int*>(&size.width), reinterpret_cast<int*>(&size.height));
+    glfwGetFramebufferSize(
+        mNativeHandle,
+        reinterpret_cast<int*>(&size.width),
+        reinterpret_cast<int*>(&size.height));
     return size;
 }
 

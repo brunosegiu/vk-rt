@@ -15,49 +15,59 @@ Renderer::Renderer(Context* context, Scene* scene) : mContext(context), mScene(s
 void Renderer::CreateStorageImage() {
     Swapchain* swapchain = mContext->GetSwapchain();
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    vk::ImageCreateInfo imageCreateInfo = vk::ImageCreateInfo()
-                                              .setImageType(vk::ImageType::e2D)
-                                              .setFormat(swapchain->GetFormat())
-                                              .setExtent(vk::Extent3D{swapchain->GetExtent(), 1})
-                                              .setMipLevels(1)
-                                              .setArrayLayers(1)
-                                              .setSamples(vk::SampleCountFlagBits::e1)
-                                              .setTiling(vk::ImageTiling::eOptimal)
-                                              .setUsage(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage)
-                                              .setInitialLayout(vk::ImageLayout::eUndefined);
+    vk::ImageCreateInfo imageCreateInfo =
+        vk::ImageCreateInfo()
+            .setImageType(vk::ImageType::e2D)
+            .setFormat(swapchain->GetFormat())
+            .setExtent(vk::Extent3D{swapchain->GetExtent(), 1})
+            .setMipLevels(1)
+            .setArrayLayers(1)
+            .setSamples(vk::SampleCountFlagBits::e1)
+            .setTiling(vk::ImageTiling::eOptimal)
+            .setUsage(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage)
+            .setInitialLayout(vk::ImageLayout::eUndefined);
     mStorageImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
 
     vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mStorageImage);
-    mStorageImageMemory = mContext->GetDevice()->AllocateMemory(vk::MemoryPropertyFlagBits::eDeviceLocal, imageMemReq);
+    mStorageImageMemory = mContext->GetDevice()->AllocateMemory(
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        imageMemReq);
     VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mStorageImage, mStorageImageMemory, 0));
 
-    vk::ImageViewCreateInfo storageImageViewCreateInfo = vk::ImageViewCreateInfo()
-                                                             .setViewType(vk::ImageViewType::e2D)
-                                                             .setFormat(swapchain->GetFormat())
-                                                             .setSubresourceRange(vk::ImageSubresourceRange()
-                                                                                      .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                                                                      .setBaseMipLevel(0)
-                                                                                      .setLevelCount(1)
-                                                                                      .setBaseArrayLayer(0)
-                                                                                      .setLayerCount(1))
-                                                             .setImage(mStorageImage);
+    vk::ImageViewCreateInfo storageImageViewCreateInfo =
+        vk::ImageViewCreateInfo()
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(swapchain->GetFormat())
+            .setSubresourceRange(vk::ImageSubresourceRange()
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setBaseMipLevel(0)
+                                     .setLevelCount(1)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImage(mStorageImage);
     mStorageImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(storageImageViewCreateInfo));
 
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
     VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
-    vk::ImageMemoryBarrier imageMemoryBarrier = vk::ImageMemoryBarrier()
-                                                    .setOldLayout(vk::ImageLayout::eUndefined)
-                                                    .setNewLayout(vk::ImageLayout::eGeneral)
-                                                    .setSubresourceRange(vk::ImageSubresourceRange()
-                                                                             .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                                                             .setBaseMipLevel(0)
-                                                                             .setLevelCount(1)
-                                                                             .setBaseArrayLayer(0)
-                                                                             .setLayerCount(1))
-                                                    .setSrcAccessMask({})
-                                                    .setImage(mStorageImage);
-    commandBuffer
-        .pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, nullptr, nullptr, imageMemoryBarrier);
+    vk::ImageMemoryBarrier imageMemoryBarrier =
+        vk::ImageMemoryBarrier()
+            .setOldLayout(vk::ImageLayout::eUndefined)
+            .setNewLayout(vk::ImageLayout::eGeneral)
+            .setSubresourceRange(vk::ImageSubresourceRange()
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setBaseMipLevel(0)
+                                     .setLevelCount(1)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setSrcAccessMask({})
+            .setImage(mStorageImage);
+    commandBuffer.pipelineBarrier(
+        vk::PipelineStageFlagBits::eAllCommands,
+        vk::PipelineStageFlagBits::eAllCommands,
+        {},
+        nullptr,
+        nullptr,
+        imageMemoryBarrier);
     VKRT_ASSERT_VK(commandBuffer.end());
     mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
@@ -76,7 +86,10 @@ void Renderer::CreateUniformBuffer() {
         vk::BufferUsageFlagBits::eStorageBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
     uint8_t* buffer = mSceneUniformBuffer->MapBuffer();
-    std::copy_n(reinterpret_cast<const uint8_t*>(descriptions.data()), descriptionsBufferSize, buffer);
+    std::copy_n(
+        reinterpret_cast<const uint8_t*>(descriptions.data()),
+        descriptionsBufferSize,
+        buffer);
     mSceneUniformBuffer->UnmapBuffer();
 }
 
@@ -92,23 +105,31 @@ void Renderer::UpdateCameraUniforms(Camera* camera) {
 void Renderer::CreateDescriptors() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
-    vk::DescriptorPoolCreateInfo poolCreateInfo = vk::DescriptorPoolCreateInfo().setPoolSizes(mPipeline->GetDescriptorSizes()).setMaxSets(1);
+    vk::DescriptorPoolCreateInfo poolCreateInfo =
+        vk::DescriptorPoolCreateInfo().setPoolSizes(mPipeline->GetDescriptorSizes()).setMaxSets(1);
     mDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
 
     vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
-        vk::DescriptorSetAllocateInfo().setDescriptorPool(mDescriptorPool).setSetLayouts(mPipeline->GetDescriptorLayout());
-    mDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(descriptorAllocateInfo)).front();
+        vk::DescriptorSetAllocateInfo()
+            .setDescriptorPool(mDescriptorPool)
+            .setSetLayouts(mPipeline->GetDescriptorLayout());
+    mDescriptorSet =
+        VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(descriptorAllocateInfo)).front();
 
     vk::WriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo =
-        vk::WriteDescriptorSetAccelerationStructureKHR().setAccelerationStructures(mScene->GetTLAS());
-    vk::WriteDescriptorSet accelerationStructureWrite = vk::WriteDescriptorSet()
-                                                            .setDstSet(mDescriptorSet)
-                                                            .setDstBinding(0)
-                                                            .setDescriptorCount(1)
-                                                            .setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
-                                                            .setPNext(&descriptorAccelerationStructureInfo);
+        vk::WriteDescriptorSetAccelerationStructureKHR().setAccelerationStructures(
+            mScene->GetTLAS());
+    vk::WriteDescriptorSet accelerationStructureWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(0)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+            .setPNext(&descriptorAccelerationStructureInfo);
 
-    vk::DescriptorImageInfo storageImageInfo = vk::DescriptorImageInfo().setImageView(mStorageImageView).setImageLayout(vk::ImageLayout::eGeneral);
+    vk::DescriptorImageInfo storageImageInfo = vk::DescriptorImageInfo()
+                                                   .setImageView(mStorageImageView)
+                                                   .setImageLayout(vk::ImageLayout::eGeneral);
     vk::WriteDescriptorSet imageWrite = vk::WriteDescriptorSet()
                                             .setDstSet(mDescriptorSet)
                                             .setDstBinding(1)
@@ -116,19 +137,21 @@ void Renderer::CreateDescriptors() {
                                             .setDescriptorType(vk::DescriptorType::eStorageImage)
                                             .setImageInfo(storageImageInfo);
 
-    vk::WriteDescriptorSet cameraUniformBufferWrite = vk::WriteDescriptorSet()
-                                                          .setDstSet(mDescriptorSet)
-                                                          .setDstBinding(2)
-                                                          .setDescriptorCount(1)
-                                                          .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-                                                          .setBufferInfo(mCameraUniformBuffer->GetDescriptorInfo());
+    vk::WriteDescriptorSet cameraUniformBufferWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(2)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setBufferInfo(mCameraUniformBuffer->GetDescriptorInfo());
 
-    vk::WriteDescriptorSet sceneUniformBufferWrite = vk::WriteDescriptorSet()
-                                                         .setDstSet(mDescriptorSet)
-                                                         .setDstBinding(3)
-                                                         .setDescriptorCount(1)
-                                                         .setDescriptorType(vk::DescriptorType::eStorageBuffer)
-                                                         .setBufferInfo(mSceneUniformBuffer->GetDescriptorInfo());
+    vk::WriteDescriptorSet sceneUniformBufferWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(3)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setBufferInfo(mSceneUniformBuffer->GetDescriptorInfo());
 
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
         accelerationStructureWrite,
@@ -149,8 +172,15 @@ void Renderer::Render(Camera* camera) {
     {
         VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
 
-        commandBuffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, mPipeline->GetPipelineHandle());
-        commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR, mPipeline->GetPipelineLayout(), 0, mDescriptorSet, nullptr);
+        commandBuffer.bindPipeline(
+            vk::PipelineBindPoint::eRayTracingKHR,
+            mPipeline->GetPipelineHandle());
+        commandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eRayTracingKHR,
+            mPipeline->GetPipelineLayout(),
+            0,
+            mDescriptorSet,
+            nullptr);
 
         const vk::Extent2D& imageSize = mContext->GetSwapchain()->GetExtent();
         const RayTracingPipeline::RayTracingTablesRef& tableRef = mPipeline->GetTablesRef();
@@ -165,7 +195,8 @@ void Renderer::Render(Camera* camera) {
             mContext->GetDevice()->GetDispatcher());
 
         vk::Image& currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
-        const vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+        const vk::ImageSubresourceRange subresourceRange =
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
         SetImageLayout(
             commandBuffer,
@@ -185,12 +216,15 @@ void Renderer::Render(Camera* camera) {
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        vk::ImageCopy imageCopyRegion = vk::ImageCopy()
-                                            .setSrcSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
-                                            .setSrcOffset(vk::Offset3D(0, 0, 0))
-                                            .setDstSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
-                                            .setDstOffset(vk::Offset3D(0, 0, 0))
-                                            .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
+        vk::ImageCopy imageCopyRegion =
+            vk::ImageCopy()
+                .setSrcSubresource(
+                    vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                .setSrcOffset(vk::Offset3D(0, 0, 0))
+                .setDstSubresource(
+                    vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                .setDstOffset(vk::Offset3D(0, 0, 0))
+                .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
         commandBuffer.copyImage(
             mStorageImage,
             vk::ImageLayout::eTransferSrcOptimal,
@@ -227,7 +261,10 @@ void Renderer::Render(Camera* camera) {
             .setWaitSemaphores(mContext->GetSwapchain()->GetPresentSemaphore())
             .setSignalSemaphores(mContext->GetSwapchain()->GetRenderSemaphore()),
         fence));
-    VKRT_ASSERT_VK(mContext->GetDevice()->GetLogicalDevice().waitForFences(fence, true, std::numeric_limits<uint64_t>::max()));
+    VKRT_ASSERT_VK(mContext->GetDevice()->GetLogicalDevice().waitForFences(
+        fence,
+        true,
+        std::numeric_limits<uint64_t>::max()));
     mContext->GetDevice()->DestroyFence(fence);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
 
@@ -242,8 +279,11 @@ void Renderer::SetImageLayout(
     const vk::ImageSubresourceRange& subresourceRange,
     vk::PipelineStageFlags srcStageMask,
     vk::PipelineStageFlags dstStageMask) {
-    vk::ImageMemoryBarrier imageBarrier =
-        vk::ImageMemoryBarrier().setOldLayout(oldLayout).setNewLayout(newLayout).setImage(image).setSubresourceRange(subresourceRange);
+    vk::ImageMemoryBarrier imageBarrier = vk::ImageMemoryBarrier()
+                                              .setOldLayout(oldLayout)
+                                              .setNewLayout(newLayout)
+                                              .setImage(image)
+                                              .setSubresourceRange(subresourceRange);
 
     switch (oldLayout) {
         case vk::ImageLayout::eUndefined:

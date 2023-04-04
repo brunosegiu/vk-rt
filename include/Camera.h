@@ -44,7 +44,10 @@ private:
     glm::vec3 mPosition;
 
     struct KeyStates {
-        bool forwardPressed = false, backwardsPressed = false, leftPressed = false, rightPressed = false;
+        bool forwardPressed = false;
+        bool backwardsPressed = false;
+        bool leftPressed = false;
+        bool rightPressed = false;
     };
     KeyStates mKeyStates;
     glm::vec2 mCurrentMousePos;

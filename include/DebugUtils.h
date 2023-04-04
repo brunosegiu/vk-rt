@@ -31,17 +31,17 @@
 #endif
 
 #ifdef VKRT_DEBUG
-#define VKRT_ASSERT_MSG(condition, message)                                                                                                  \
-    {                                                                                                                                        \
-        if (!(condition)) {                                                                                                                  \
-            std::string fileInfo = message;                                                                                                  \
-            std::wstring wInfo = std::wstring(fileInfo.begin(), fileInfo.end());                                                             \
-            VKRT_LOG(                                                                                                                        \
-                "In file: " << __FILE__ << ", line: " << __LINE__ << " of function: " << __FUNCTION__ << "Condition failed : " << #condition \
-                            << std::endl                                                                                                     \
-                            << message << std::endl);                                                                                        \
-            VKRT_DEBUG_BREAK();                                                                                                              \
-        }                                                                                                                                    \
+#define VKRT_ASSERT_MSG(condition, message)                                                     \
+    {                                                                                           \
+        if (!(condition)) {                                                                     \
+            std::string fileInfo = message;                                                     \
+            std::wstring wInfo = std::wstring(fileInfo.begin(), fileInfo.end());                \
+            VKRT_LOG(                                                                           \
+                "In file: " << __FILE__ << ", line: " << __LINE__ << " of function: "           \
+                            << __FUNCTION__ << "Condition failed : " << #condition << std::endl \
+                            << message << std::endl);                                           \
+            VKRT_DEBUG_BREAK();                                                                 \
+        }                                                                                       \
     }
 #else
 #define VKRT_ASSERT_MSG(condition, message) VKRT_UNUSED(condition)

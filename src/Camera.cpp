@@ -5,7 +5,12 @@
 #include <glm/gtc/quaternion.hpp>
 
 namespace VKRT {
-Camera::Camera(Window* window) : mWindow(window), mMovementSpeed(2.0f), mRotationSpeed(100.0f), mActive(false), mCurrentMousePos(0.0, 0.0) {
+Camera::Camera(Window* window)
+    : mWindow(window),
+      mMovementSpeed(2.0f),
+      mRotationSpeed(100.0f),
+      mActive(false),
+      mCurrentMousePos(0.0, 0.0) {
     mWindow->AddRef();
     InputManager* inputManager = mWindow->GetInputManager();
     inputManager->Subscribe(this);
@@ -13,15 +18,21 @@ Camera::Camera(Window* window) : mWindow(window), mMovementSpeed(2.0f), mRotatio
     mEulerRotation = glm::vec3(0.0);
     mPosition = glm::vec3(0.0);
     auto windowSize = mWindow->GetSize();
-    mProjectionTransform =
-        glm::perspective(glm::radians(60.0), static_cast<double>(windowSize.width) / static_cast<double>(windowSize.height), 0.01, 1000.0);
+    mProjectionTransform = glm::perspective(
+        glm::radians(60.0),
+        static_cast<double>(windowSize.width) / static_cast<double>(windowSize.height),
+        0.01,
+        1000.0);
 }
 
 void Camera::UpdateViewTransform() {
     glm::mat4 rotationTransform = glm::mat4(1.0f);
-    rotationTransform = glm::rotate(rotationTransform, glm::radians(mEulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-    rotationTransform = glm::rotate(rotationTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-    rotationTransform = glm::rotate(rotationTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    rotationTransform =
+        glm::rotate(rotationTransform, glm::radians(mEulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    rotationTransform =
+        glm::rotate(rotationTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    rotationTransform =
+        glm::rotate(rotationTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
     glm::mat4 translationTransform = glm::translate(glm::mat4(1.0f), mPosition);
 
@@ -103,7 +114,8 @@ void Camera::OnMouseMoved(glm::vec2 newPos) {
 void Camera::OnLeftMouseButtonPressed() {
     mActive = !mActive;
     InputManager* inputManager = mWindow->GetInputManager();
-    inputManager->SetCursorMode(mActive ? InputManager::CursorMode::Disabled : InputManager::CursorMode::Normal);
+    inputManager->SetCursorMode(
+        mActive ? InputManager::CursorMode::Disabled : InputManager::CursorMode::Normal);
 }
 
 void Camera::OnLeftMouseButtonReleased() {}

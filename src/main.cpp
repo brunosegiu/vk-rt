@@ -14,7 +14,9 @@ struct Timer {
     }
     uint64_t ElapsedMillis() { return Elapsed<std::chrono::milliseconds>(); }
     uint64_t ElapsedMicros() { return Elapsed<std::chrono::microseconds>(); }
-    double ElapsedSeconds() { return static_cast<double>(Elapsed<std::chrono::microseconds>()) / 1000000.0; }
+    double ElapsedSeconds() {
+        return static_cast<double>(Elapsed<std::chrono::microseconds>()) / 1000000.0;
+    }
 
     std::chrono::steady_clock::time_point beginTime;
 };

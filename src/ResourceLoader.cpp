@@ -13,12 +13,11 @@ extern "C" {
 #include "incbin.h"
 }
 
-namespace VKRT
-{
+namespace VKRT {
 INCBIN(GenShader, "raytrace.rgen.spv");
 INCBIN(HitShader, "raytrace.rchit.spv");
 INCBIN(MissShader, "raytrace.rmiss.spv");
-}
+}  // namespace VKRT
 #endif
 
 namespace VKRT {
@@ -41,7 +40,10 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     }
 
     HMODULE module = nullptr;
-    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&ResourceLoader::Load, &module);
+    GetModuleHandleExA(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)&ResourceLoader::Load,
+        &module);
     HRSRC resource = FindResource(module, MAKEINTRESOURCE(actualId), RT_RCDATA);
     if (resource != nullptr) {
         size_t bufferSize = SizeofResource(module, resource);
@@ -61,22 +63,13 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
 Resource ResourceLoader::Load(const Resource::Id& resourceId) {
     switch (resourceId) {
         case Resource::Id::GenShader: {
-            return Resource {
-                .buffer = gGenShaderData, 
-                .size = gGenShaderSize
-            };
+            return Resource{.buffer = gGenShaderData, .size = gGenShaderSize};
         } break;
         case Resource::Id::HitShader: {
-            return Resource {
-                .buffer = gHitShaderData, 
-                .size = gHitShaderSize
-            };
+            return Resource{.buffer = gHitShaderData, .size = gHitShaderSize};
         } break;
         case Resource::Id::MissShader: {
-            return Resource {
-                .buffer = gMissShaderData, 
-                .size = gMissShaderSize
-            };
+            return Resource{.buffer = gMissShaderData, .size = gMissShaderSize};
         } break;
         default:
             return {nullptr, 0};

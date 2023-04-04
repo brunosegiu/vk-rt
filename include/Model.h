@@ -18,7 +18,10 @@ public:
         glm::vec3 normal;
         glm::vec2 texCoord;
     };
-    Model(Context* context, const std::vector<Vertex>& vertices, const std::vector<glm::uvec3>& indices);
+    Model(
+        Context* context,
+        const std::vector<Vertex>& vertices,
+        const std::vector<glm::uvec3>& indices);
 
     struct Description {
         vk::DeviceAddress vertexBufferAddress;

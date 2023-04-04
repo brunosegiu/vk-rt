@@ -21,7 +21,8 @@ ResultValue<Device*> Device::Create(Instance* instance, const vk::SurfaceKHR& su
 
 Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& surface)
     : mContext(nullptr), mPhysicalDevice(physicalDevice) {
-    const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties = mPhysicalDevice.getQueueFamilyProperties();
+    const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties =
+        mPhysicalDevice.getQueueFamilyProperties();
     uint32_t queueFamilyIndex = 0;
     for (const auto& properties : queueFamiliesProperties) {
         if (properties.queueFlags & vk::QueueFlagBits::eGraphics) {
@@ -33,31 +34,43 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::
     }
     VKRT_ASSERT(queueFamilyIndex < static_cast<uint32_t>(queueFamiliesProperties.size()));
     const std::vector<float> queuePriorities{1.0f};
-    vk::DeviceQueueCreateInfo queueCreateInfo = vk::DeviceQueueCreateInfo().setQueueFamilyIndex(queueFamilyIndex).setQueuePriorities(queuePriorities);
+    vk::DeviceQueueCreateInfo queueCreateInfo = vk::DeviceQueueCreateInfo()
+                                                    .setQueueFamilyIndex(queueFamilyIndex)
+                                                    .setQueuePriorities(queuePriorities);
 
     vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures =
         vk::PhysicalDeviceBufferDeviceAddressFeatures().setBufferDeviceAddress(true);
 
     vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures =
-        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true).setPNext(&bufferDeviceAddressFeatures);
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true).setPNext(
+            &bufferDeviceAddressFeatures);
 
     vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures =
-        vk::PhysicalDeviceAccelerationStructureFeaturesKHR().setAccelerationStructure(true).setPNext(&rayTracingFeatures);
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR()
+            .setAccelerationStructure(true)
+            .setPNext(&rayTracingFeatures);
     const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
-    const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
-                                                      .setQueueCreateInfos(queueCreateInfo)
-                                                      .setPNext(&accelerationStructureFeatures)
-                                                      .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions)
-                                                      .setPEnabledFeatures(&deviceFeatures);
+    const vk::DeviceCreateInfo deviceCreateInfo =
+        vk::DeviceCreateInfo()
+            .setQueueCreateInfos(queueCreateInfo)
+            .setPNext(&accelerationStructureFeatures)
+            .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions)
+            .setPEnabledFeatures(&deviceFeatures);
     mLogicalDevice = VKRT_ASSERT_VK(mPhysicalDevice.createDevice(deviceCreateInfo));
 
     mGraphicsQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);
 
     const vk::CommandPoolCreateInfo commandPoolCreateInfo =
-        vk::CommandPoolCreateInfo().setQueueFamilyIndex(queueFamilyIndex).setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+        vk::CommandPoolCreateInfo()
+            .setQueueFamilyIndex(queueFamilyIndex)
+            .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
     mCommandPool = VKRT_ASSERT_VK(mLogicalDevice.createCommandPool(commandPoolCreateInfo));
 
-    mDispatcher = vk::DispatchLoaderDynamic(instance->GetHandle(), vkGetInstanceProcAddr, mLogicalDevice, vkGetDeviceProcAddr);
+    mDispatcher = vk::DispatchLoaderDynamic(
+        instance->GetHandle(),
+        vkGetInstanceProcAddr,
+        mLogicalDevice,
+        vkGetDeviceProcAddr);
 }
 
 void Device::SetContext(Context* context) {
@@ -70,18 +83,23 @@ vk::DeviceMemory Device::AllocateMemory(
     const vk::MemoryRequirements memoryRequirements,
     const vk::MemoryAllocateFlags& memoryAllocateFlags) {
     // Find suitable memory to allocate the buffer in
-    const vk::PhysicalDeviceMemoryProperties memoryProperties = mPhysicalDevice.getMemoryProperties();
+    const vk::PhysicalDeviceMemoryProperties memoryProperties =
+        mPhysicalDevice.getMemoryProperties();
     uint32_t selectedMemoryIndex = 0;
     for (uint32_t memoryIndex = 0; memoryIndex < memoryProperties.memoryTypeCount; ++memoryIndex) {
-        if (memoryRequirements.memoryTypeBits & (1 << memoryIndex) && (memoryProperties.memoryTypes[memoryIndex].propertyFlags & memoryFlags)) {
+        if (memoryRequirements.memoryTypeBits & (1 << memoryIndex) &&
+            (memoryProperties.memoryTypes[memoryIndex].propertyFlags & memoryFlags)) {
             selectedMemoryIndex = memoryIndex;
             break;
         }
     }
 
     // Allocate memory for the buffer
-    vk::MemoryAllocateFlagsInfo memoryAllocateFlagsInfo = vk::MemoryAllocateFlagsInfo().setFlags(memoryAllocateFlags);
-    vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo().setAllocationSize(memoryRequirements.size).setMemoryTypeIndex(selectedMemoryIndex);
+    vk::MemoryAllocateFlagsInfo memoryAllocateFlagsInfo =
+        vk::MemoryAllocateFlagsInfo().setFlags(memoryAllocateFlags);
+    vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo()
+                                              .setAllocationSize(memoryRequirements.size)
+                                              .setMemoryTypeIndex(selectedMemoryIndex);
     if (memoryAllocateFlags != vk::MemoryAllocateFlags()) {
         allocateInfo.setPNext(&memoryAllocateFlagsInfo);
     }
@@ -98,8 +116,10 @@ VulkanBuffer* Device::CreateBuffer(
 }
 
 vk::CommandBuffer Device::CreateCommandBuffer() {
-    vk::CommandBufferAllocateInfo commandInfo =
-        vk::CommandBufferAllocateInfo().setCommandBufferCount(1).setCommandPool(mCommandPool).setLevel(vk::CommandBufferLevel::ePrimary);
+    vk::CommandBufferAllocateInfo commandInfo = vk::CommandBufferAllocateInfo()
+                                                    .setCommandBufferCount(1)
+                                                    .setCommandPool(mCommandPool)
+                                                    .setLevel(vk::CommandBufferLevel::ePrimary);
     return VKRT_ASSERT_VK(mLogicalDevice.allocateCommandBuffers(commandInfo))[0];
 }
 
@@ -125,7 +145,8 @@ vk::Fence Device::CreateFence() {
 }
 
 void Device::WaitForFence(vk::Fence& fence) {
-    VKRT_ASSERT_VK(mLogicalDevice.waitForFences(fence, true, (std::numeric_limits<uint64_t>::max)()));
+    VKRT_ASSERT_VK(
+        mLogicalDevice.waitForFences(fence, true, (std::numeric_limits<uint64_t>::max)()));
 }
 
 void Device::DestroyFence(vk::Fence& fence) {
@@ -142,7 +163,9 @@ Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR su
 }
 
 vk::PhysicalDeviceRayTracingPipelinePropertiesKHR Device::GetRayTracingProperties() {
-    auto result = mPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+    auto result = mPhysicalDevice.getProperties2<
+        vk::PhysicalDeviceProperties2,
+        vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
     return result.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
 }
 
