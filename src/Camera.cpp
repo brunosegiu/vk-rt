@@ -5,7 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 namespace VKRT {
-Camera::Camera(Window* window) : mWindow(window), mActive(false), mCurrentMousePos(0.0, 0.0) {
+Camera::Camera(Window* window) : mWindow(window), mMovementSpeed(2.0f), mRotationSpeed(100.0f), mActive(false), mCurrentMousePos(0.0, 0.0) {
     mWindow->AddRef();
     InputManager* inputManager = mWindow->GetInputManager();
     inputManager->Subscribe(this);
@@ -35,7 +35,7 @@ glm::vec3 Camera::GetForwardDir() {
 
 void Camera::Update(float deltaTime) {
     const glm::vec3 forwardDir = GetForwardDir();
-    const float moveDelta = deltaTime * 2.0f;
+    const float moveDelta = deltaTime * mMovementSpeed;
     if (mKeyStates.forwardPressed) {
         mPosition += forwardDir * moveDelta;
     }
@@ -94,8 +94,10 @@ void Camera::OnKeyReleased(int key) {
 
 void Camera::OnMouseMoved(glm::vec2 newPos) {
     if (mActive) {
-        SetRotation(glm::vec3(-newPos.y * 100.0, newPos.x * 100.0, 0.0f));
+        glm::vec2 delta = newPos - mCurrentMousePos;
+        Rotate(glm::vec3(-delta.y * mRotationSpeed, delta.x * mRotationSpeed, 0.0f));
     }
+    mCurrentMousePos = newPos;
 }
 
 void Camera::OnLeftMouseButtonPressed() {

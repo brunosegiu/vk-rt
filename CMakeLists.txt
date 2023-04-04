@@ -4,9 +4,9 @@ set(VERSION 1.0)
 set(PROJECT_NAME VK-RT)
 
 if (WIN32)
-    set(VCPKG_TARGET_TRIPLET "x64-windows")
+    set(VCPKG_TARGET_TRIPLET "x64-windows-static")
 elseif(UNIX)
-    set(VCPKG_TARGET_TRIPLET "x64-linux")
+    set(VCPKG_TARGET_TRIPLET "x64-linux-static")
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vcpkg/scripts/buildsystems/vcpkg.cmake")

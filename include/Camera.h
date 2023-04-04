@@ -35,6 +35,8 @@ private:
 
     Window* mWindow;
 
+    float mMovementSpeed, mRotationSpeed;
+
     glm::mat4 mViewTransform;
     glm::mat4 mProjectionTransform;
 
