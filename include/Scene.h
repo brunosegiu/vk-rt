@@ -18,6 +18,8 @@ public:
     void AddObject(Object* object);
     const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
+    std::vector<Model::Description> GetDescriptions();
+
     void Commit();
 
     ~Scene();

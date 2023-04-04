@@ -149,6 +149,11 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(const vk::S
             chosenDeviceScore = 0;
         }
 
+        const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
+        if (!deviceFeatures.shaderInt64) {
+            chosenDeviceScore = 0;
+        }
+
         if (chosenDeviceScore < currentDeviceScore) {
             chosenDevice = physicalDevice;
             chosenDeviceScore = currentDeviceScore;

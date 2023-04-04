@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 set(VERSION 1.0)
 set(PROJECT_NAME VK-RT)
 
-if (MSVC)
+if (WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows")
 elseif(UNIX)
     set(VCPKG_TARGET_TRIPLET "x64-linux")
@@ -83,7 +83,7 @@ add_executable(${PROJECT_NAME}
     ${PLATFORM_SPECIFIC_FILES}
 )
 
-if(MSVC)
+if(WIN32)
     add_compile_definitions(VKRT_PLATFORM_WINDOWS)
 elseif(UNIX)
     add_compile_definitions(VKRT_PLATFORM_LINUX)
@@ -123,7 +123,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin)
 endif()
 
 # Add shader compilation build step
-if(MSVC)
+if(WIN32)
     set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/Bin/glslc.exe")
 elseif(UNIX)
     set(SHADER_COMPILER_PATH "$ENV{VULKAN_SDK}/bin/glslc")
@@ -137,15 +137,13 @@ foreach(SHADER ${SHADERS})
     set(COMPILED_SHADER_PATH "${SHADER_SRC_DIR}/${COMPILED_SHADER}")
     list(APPEND COMPILED_SHADERS ${COMPILED_SHADER_PATH})
     add_custom_command(
-        OUTPUT ${COMPILED_SHADER}
+        OUTPUT ${COMPILED_SHADER_PATH}
         COMMAND ${SHADER_COMPILER_PATH} ${SRC_SHADER_PATH} -o ${COMPILED_SHADER_PATH} --target-env=vulkan1.2
         DEPENDS ${SRC_SHADER_PATH}
     )
-
 endforeach()
 
 add_custom_target(${SHADER_DEPENDENCIES} DEPENDS ${COMPILED_SHADERS})
-
 foreach(SHADER ${SHADERS})
     set(COMPILED_SHADER "${SHADER}.spv")
     set(COMPILED_SHADER_PATH "${SHADER_SRC_DIR}/${COMPILED_SHADER}")

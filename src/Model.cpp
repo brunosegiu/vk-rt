@@ -21,9 +21,20 @@ Model* Model::Load(Context* context, const std::string& path) {
             const int32_t meshIndex = model.nodes.front().mesh;
             const tinygltf::Mesh& mesh = model.meshes[meshIndex];
             const tinygltf::Primitive& primitive = mesh.primitives.front();
-            const std::string positionName = "POSITION";
-            const tinygltf::Accessor& positionAccessor = model.accessors[primitive.attributes.at(positionName)];
 
+            const std::string positionName = "POSITION";
+            const std::string normalName = "NORMAL";
+            const std::string texCoordName = "TEXCOORD_0";
+
+            const std::map<std::string, int>& attributes = primitive.attributes;
+            const bool hasAttributes = attributes.find(positionName) != attributes.end() && attributes.find(normalName) != attributes.end() &&
+                                       attributes.find(texCoordName) != attributes.end();
+
+            if (!hasAttributes) {
+                return nullptr;
+            }
+
+            const tinygltf::Accessor& positionAccessor = model.accessors[attributes.at(positionName)];
             std::vector<glm::vec3> positions(positionAccessor.count);
             {
                 const tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccessor.bufferView];
@@ -37,6 +48,45 @@ Model* Model::Load(Context* context, const std::string& path) {
                     const float* positionDataFloat = reinterpret_cast<const float*>(&positionData[vetexStride * positionIndex]);
                     positions[positionIndex] = glm::vec3(positionDataFloat[0], -positionDataFloat[1], positionDataFloat[2]);
                 }
+            }
+
+            const tinygltf::Accessor& normalAccessor = model.accessors[attributes.at(normalName)];
+            std::vector<glm::vec3> normals(normalAccessor.count);
+            {
+                const tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccessor.bufferView];
+                const tinygltf::Buffer& normalBuffer = model.buffers[normalBufferView.buffer];
+                const size_t normalBufferOffset = normalBufferView.byteOffset + normalAccessor.byteOffset;
+                size_t vetexStride = normalAccessor.ByteStride(normalBufferView);
+                const unsigned char* normalData = &normalBuffer.data[normalBufferOffset];
+
+                const uint32_t normalCount = static_cast<uint32_t>(normalAccessor.count);
+                for (uint32_t normalIndex = 0; normalIndex < normalCount; ++normalIndex) {
+                    const float* normalDataFloat = reinterpret_cast<const float*>(&normalData[vetexStride * normalIndex]);
+                    normals[normalIndex] = glm::vec3(normalDataFloat[0], normalDataFloat[1], normalDataFloat[2]);
+                }
+            }
+
+            const tinygltf::Accessor& texCoordAccessor = model.accessors[attributes.at(texCoordName)];
+            std::vector<glm::vec2> texCoords(texCoordAccessor.count);
+            {
+                const tinygltf::BufferView& texCoordBufferView = model.bufferViews[texCoordAccessor.bufferView];
+                const tinygltf::Buffer& texCoordBuffer = model.buffers[texCoordBufferView.buffer];
+                const size_t texCoordBufferOffset = texCoordBufferView.byteOffset + texCoordAccessor.byteOffset;
+                size_t vetexStride = texCoordAccessor.ByteStride(texCoordBufferView);
+                const unsigned char* texCoordData = &texCoordBuffer.data[texCoordBufferOffset];
+
+                const uint32_t texCoordCount = static_cast<uint32_t>(texCoordAccessor.count);
+                for (uint32_t texCoordIndex = 0; texCoordIndex < texCoordCount; ++texCoordIndex) {
+                    const float* texCoordDataFloat = reinterpret_cast<const float*>(&texCoordData[vetexStride * texCoordIndex]);
+                    texCoords[texCoordIndex] = glm::vec2(texCoordDataFloat[0], texCoordDataFloat[1]);
+                }
+            }
+
+            std::vector<Model::Vertex> vertices;
+            vertices.reserve(positions.size());
+            for (size_t vertexIndex = 0; vertexIndex < positions.size(); ++vertexIndex) {
+                Model::Vertex vertex{.position = positions[vertexIndex], .normal = normals[vertexIndex], .texCoord = texCoords[vertexIndex]};
+                vertices.push_back(vertex);
             }
 
             const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
@@ -53,20 +103,20 @@ Model* Model::Load(Context* context, const std::string& path) {
                     indices.emplace_back(triangle);
                 }
             }
-            return new Model(context, positions, indices);
+            return new Model(context, vertices, indices);
         }
     }
     return nullptr;
 }
 
-Model::Model(Context* context, const std::vector<glm::vec3>& vertices, const std::vector<glm::uvec3>& indices) : mContext(context) {
+Model::Model(Context* context, const std::vector<Vertex>& vertices, const std::vector<glm::uvec3>& indices) : mContext(context) {
     mContext->AddRef();
 
     uint32_t triangleCount = indices.size();
     VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
 
     {
-        const size_t vertexBufferSize = vertices.size() * sizeof(glm::vec3);
+        const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
         mVertexBuffer = mContext->GetDevice()->CreateBuffer(
             vertexBufferSize,
             vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR,
@@ -104,7 +154,7 @@ Model::Model(Context* context, const std::vector<glm::vec3>& vertices, const std
                                                                          .setVertexFormat(vk::Format::eR32G32B32A32Sfloat)
                                                                          .setVertexData(mVertexBuffer->GetDeviceAddress())
                                                                          .setMaxVertex(vertices.size())
-                                                                         .setVertexStride(sizeof(glm::vec3))
+                                                                         .setVertexStride(sizeof(Vertex))
                                                                          .setIndexType(vk::IndexType::eUint32)
                                                                          .setIndexData(mIndexBuffer->GetDeviceAddress())
                                                                          .setTransformData(mTransformBuffer->GetDeviceAddress());
@@ -173,6 +223,10 @@ Model::Model(Context* context, const std::vector<glm::vec3>& vertices, const std
     mBLASAddress = logicalDevice.getAccelerationStructureAddressKHR(accelerationDeviceAddressInfo, mContext->GetDevice()->GetDispatcher());
 
     scratchBuffer->Release();
+}
+
+Model::Description Model::GetDescription() {
+    return Model::Description{.vertexBufferAddress = mVertexBuffer->GetDeviceAddress(), .indexBufferAddress = mIndexBuffer->GetDeviceAddress()};
 }
 
 Model::~Model() {

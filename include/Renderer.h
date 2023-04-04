@@ -40,7 +40,8 @@ private:
     vk::DeviceMemory mStorageImageMemory;
     vk::ImageView mStorageImageView;
 
-    VulkanBuffer* mUniformBuffer;
+    VulkanBuffer* mCameraUniformBuffer;
+    VulkanBuffer* mSceneUniformBuffer;
 
     RayTracingPipeline* mPipeline;
     vk::DescriptorPool mDescriptorPool;

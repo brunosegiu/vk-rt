@@ -13,6 +13,14 @@ void Scene::AddObject(Object* object) {
     mObjects.emplace_back(object);
 }
 
+std::vector<Model::Description> Scene::GetDescriptions() {
+    std::vector<Model::Description> descriptions;
+    for (Object* object : mObjects) {
+        descriptions.emplace_back(object->GetModel()->GetDescription());
+    }
+    return descriptions;
+}
+
 void Scene::Commit() {
     VKRT_ASSERT(!mCommitted);
     if (!mObjects.empty() && !mCommitted) {

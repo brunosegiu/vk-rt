@@ -26,17 +26,18 @@ int main() {
         auto [contextResult, context] = window->CreateContext();
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
-            Model* model = Model::Load(context, "C:/Users/bruno/Desktop/untitled.glb");
+            Model* model = Model::Load(context, "D:/Downloads/DamagedHelmet.glb");
             Camera* camera = new Camera(window);
-            camera->SetTranslation(glm::vec3(0.0f, 0.0f, -5.0f));
+            camera->SetTranslation(glm::vec3(0.0f, 0.0f, -4.0f));
 
             Object* object1 = new Object(model);
-            object1->SetTranslation(glm::vec3(-3.0f, 0.0f, -3.0f));
-            object1->Rotate(glm::vec3(180.0f, 180.0f, 30.0f));
+            object1->SetTranslation(glm::vec3(-3.0f, 0.0f, 0.0f));
+            object1->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
             Object* object2 = new Object(model);
+            object2->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
             Object* object3 = new Object(model);
-            object3->SetTranslation(glm::vec3(3.0f, 0.0f, 1.0f));
-            object3->Rotate(glm::vec3(180.0f, 0.0f, 120.0f));
+            object3->SetTranslation(glm::vec3(3.0f, 0.0f, 0.0f));
+            object3->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
 
             scene->AddObject(object1);
             scene->AddObject(object2);

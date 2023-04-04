@@ -64,19 +64,29 @@ void Renderer::CreateStorageImage() {
 }
 
 void Renderer::CreateUniformBuffer() {
-    mUniformBuffer = mContext->GetDevice()->CreateBuffer(
+    mCameraUniformBuffer = mContext->GetDevice()->CreateBuffer(
         sizeof(UniformData),
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    const std::vector<Model::Description> descriptions = mScene->GetDescriptions();
+    const size_t descriptionsBufferSize = sizeof(Model::Description) * descriptions.size();
+    mSceneUniformBuffer = mContext->GetDevice()->CreateBuffer(
+        descriptionsBufferSize,
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    uint8_t* buffer = mSceneUniformBuffer->MapBuffer();
+    std::copy_n(reinterpret_cast<const uint8_t*>(descriptions.data()), descriptionsBufferSize, buffer);
+    mSceneUniformBuffer->UnmapBuffer();
 }
 
 void Renderer::UpdateCameraUniforms(Camera* camera) {
-    uint8_t* buffer = mUniformBuffer->MapBuffer();
+    uint8_t* buffer = mCameraUniformBuffer->MapBuffer();
     UniformData cameraMatrices{
         .viewInverse = glm::inverse(camera->GetViewTransform()),
         .projInverse = glm::inverse(camera->GetProjectionTransform())};
     std::copy_n(reinterpret_cast<uint8_t*>(&cameraMatrices), sizeof(UniformData), buffer);
-    mUniformBuffer->UnmapBuffer();
+    mCameraUniformBuffer->UnmapBuffer();
 }
 
 void Renderer::CreateDescriptors() {
@@ -106,14 +116,26 @@ void Renderer::CreateDescriptors() {
                                             .setDescriptorType(vk::DescriptorType::eStorageImage)
                                             .setImageInfo(storageImageInfo);
 
-    vk::WriteDescriptorSet unformBufferWrite = vk::WriteDescriptorSet()
-                                                   .setDstSet(mDescriptorSet)
-                                                   .setDstBinding(2)
-                                                   .setDescriptorCount(1)
-                                                   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-                                                   .setBufferInfo(mUniformBuffer->GetDescriptorInfo());
+    vk::WriteDescriptorSet cameraUniformBufferWrite = vk::WriteDescriptorSet()
+                                                          .setDstSet(mDescriptorSet)
+                                                          .setDstBinding(2)
+                                                          .setDescriptorCount(1)
+                                                          .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                                                          .setBufferInfo(mCameraUniformBuffer->GetDescriptorInfo());
 
-    std::vector<vk::WriteDescriptorSet> writeDescriptorSets{accelerationStructureWrite, imageWrite, unformBufferWrite};
+    vk::WriteDescriptorSet sceneUniformBufferWrite = vk::WriteDescriptorSet()
+                                                         .setDstSet(mDescriptorSet)
+                                                         .setDstBinding(3)
+                                                         .setDescriptorCount(1)
+                                                         .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+                                                         .setBufferInfo(mSceneUniformBuffer->GetDescriptorInfo());
+
+    std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
+        accelerationStructureWrite,
+        imageWrite,
+        cameraUniformBufferWrite,
+        sceneUniformBufferWrite};
+
     logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
 }
 
@@ -260,7 +282,8 @@ Renderer::~Renderer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyDescriptorPool(mDescriptorPool);
 
-    mUniformBuffer->Release();
+    mCameraUniformBuffer->Release();
+    mSceneUniformBuffer->Release();
 
     logicalDevice.destroyImageView(mStorageImageView);
     logicalDevice.destroyImage(mStorageImage);

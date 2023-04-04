@@ -21,17 +21,23 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
                                                                   .setDescriptorCount(1)
                                                                   .setStageFlags(vk::ShaderStageFlagBits::eRaygenKHR);
 
-    vk::DescriptorSetLayoutBinding uniformBufferBinding = vk::DescriptorSetLayoutBinding()
-                                                              .setBinding(2)
-                                                              .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-                                                              .setDescriptorCount(1)
-                                                              .setStageFlags(vk::ShaderStageFlagBits::eRaygenKHR);
+    vk::DescriptorSetLayoutBinding cameraUniformBufferBinding = vk::DescriptorSetLayoutBinding()
+                                                                    .setBinding(2)
+                                                                    .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                                                                    .setDescriptorCount(1)
+                                                                    .setStageFlags(vk::ShaderStageFlagBits::eRaygenKHR);
+
+    vk::DescriptorSetLayoutBinding sceneUniformBufferBinding = vk::DescriptorSetLayoutBinding()
+                                                                   .setBinding(3)
+                                                                   .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+                                                                   .setDescriptorCount(1)
+                                                                   .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
 
     std::vector<vk::DescriptorSetLayoutBinding> descriptorBindings{
         accelerationStructureLayoutBinding,
         resultImageLayoutBinding,
-        uniformBufferBinding,
-    };
+        cameraUniformBufferBinding,
+        sceneUniformBufferBinding};
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
     vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vk::DescriptorSetLayoutCreateInfo().setBindings(descriptorBindings);
@@ -154,6 +160,7 @@ const std::vector<vk::DescriptorPoolSize>& RayTracingPipeline::GetDescriptorSize
         vk::DescriptorPoolSize(vk::DescriptorType::eAccelerationStructureKHR, 1),
         vk::DescriptorPoolSize(vk::DescriptorType::eStorageImage, 1),
         vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1),
+        vk::DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 1),
     };
     return poolSizes;
 }

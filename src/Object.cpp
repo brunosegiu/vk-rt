@@ -33,7 +33,7 @@ void Object::UpdateTransform() {
 
     glm::mat4 translationTransform = glm::translate(glm::mat4(1.0f), mPosition);
 
-    mTransform = rotationTransform * translationTransform;
+    mTransform = translationTransform * rotationTransform;
 }
 
 Object::~Object() {

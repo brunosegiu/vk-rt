@@ -43,11 +43,12 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::
 
     vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures =
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR().setAccelerationStructure(true).setPNext(&rayTracingFeatures);
-
+    const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
     const vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo()
                                                       .setQueueCreateInfos(queueCreateInfo)
                                                       .setPNext(&accelerationStructureFeatures)
-                                                      .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions);
+                                                      .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions)
+                                                      .setPEnabledFeatures(&deviceFeatures);
     mLogicalDevice = VKRT_ASSERT_VK(mPhysicalDevice.createDevice(deviceCreateInfo));
 
     mGraphicsQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);
