@@ -13,6 +13,7 @@ public:
     void SetTranslation(const glm::vec3& position);
     void Translate(const glm::vec3& delta);
 
+    void SetRotation(const glm::vec3& rotation);
     void Rotate(const glm::vec3& delta);
 
     glm::vec3 GetForwardDir();

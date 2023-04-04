@@ -27,9 +27,21 @@ int main() {
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
             Model* model = Model::Load(context, "C:/Users/bruno/Desktop/untitled.glb");
-            Object* object = new Object(model, glm::mat4(1.0f));
             Camera* camera = new Camera(window);
-            scene->AddObject(object);
+            camera->SetTranslation(glm::vec3(0.0f, 0.0f, -5.0f));
+
+            Object* object1 = new Object(model);
+            object1->SetTranslation(glm::vec3(-3.0f, 0.0f, -3.0f));
+            object1->Rotate(glm::vec3(180.0f, 180.0f, 30.0f));
+            Object* object2 = new Object(model);
+            Object* object3 = new Object(model);
+            object3->SetTranslation(glm::vec3(3.0f, 0.0f, 1.0f));
+            object3->Rotate(glm::vec3(180.0f, 0.0f, 120.0f));
+
+            scene->AddObject(object1);
+            scene->AddObject(object2);
+            scene->AddObject(object3);
+
             scene->Commit();
 
             Renderer* render = new Renderer(context, scene);
@@ -41,9 +53,12 @@ int main() {
                 render->Render(camera);
                 elapsedSeconds = timer.ElapsedSeconds();
             }
+            object1->Release();
+            object2->Release();
+            object3->Release();
+
             render->Release();
             camera->Release();
-            object->Release();
             model->Release();
             scene->Release();
             context->Release();

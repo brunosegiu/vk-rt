@@ -20,7 +20,8 @@ void Scene::Commit() {
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         uint32_t index = 0;
         for (Object* object : mObjects) {
-            VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+            const glm::mat4& transform = glm::transpose(object->GetTransform());
+            VkTransformMatrixKHR transformMatrix = *(reinterpret_cast<const VkTransformMatrixKHR*>(&transform));
             instances.emplace_back(vk::AccelerationStructureInstanceKHR()
                                        .setTransform(transformMatrix)
                                        .setInstanceCustomIndex(index)

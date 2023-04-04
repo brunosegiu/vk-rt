@@ -60,8 +60,12 @@ void Camera::Translate(const glm::vec3& delta) {
     mPosition += delta;
 }
 
+void Camera::SetRotation(const glm::vec3& rotation) {
+    mEulerRotation = rotation;
+}
+
 void Camera::Rotate(const glm::vec3& delta) {
-    mEulerRotation = delta;
+    mEulerRotation += delta;
 }
 
 void Camera::OnKeyPressed(int key) {
@@ -90,7 +94,7 @@ void Camera::OnKeyReleased(int key) {
 
 void Camera::OnMouseMoved(glm::vec2 newPos) {
     if (mActive) {
-        Rotate(glm::vec3(-newPos.y * 100.0, newPos.x * 100.0, 0.0f));
+        SetRotation(glm::vec3(-newPos.y * 100.0, newPos.x * 100.0, 0.0f));
     }
 }
 
