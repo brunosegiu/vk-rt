@@ -28,22 +28,27 @@ int main() {
         auto [contextResult, context] = window->CreateContext();
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
-            Model* model = Model::Load(context, "D:/Downloads/DamagedHelmet.glb");
+            Model* helmet = Model::Load(context, "D:/Downloads/DamagedHelmet.glb");
+            Model* plane =
+                Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/plane.gltf");
             Camera* camera = new Camera(window);
             camera->SetTranslation(glm::vec3(0.0f, 0.0f, -4.0f));
-
-            Object* object1 = new Object(model);
+            Light* light = new Light();
+            light->SetPosition(glm::vec3(0.0f, 5.0f, -4.0f));
+            light->SetIntensity(100.0f);
+            Object* object1 = new Object(helmet);
             object1->SetTranslation(glm::vec3(-3.0f, 0.0f, 0.0f));
             object1->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
-            Object* object2 = new Object(model);
-            object2->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
-            Object* object3 = new Object(model);
-            object3->SetTranslation(glm::vec3(3.0f, 0.0f, 0.0f));
-            object3->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
+            Object* object2 = new Object(helmet);
+            object2->Rotate(glm::vec3(0.0f, 90.0f, 0.0f));
+            Object* object3 = new Object(plane);
+            object3->SetTranslation(glm::vec3(0.0f, -5.0f, 0.0f));
+            object3->Rotate(glm::vec3(0.0f, 0.0f, 0.0f));
 
             scene->AddObject(object1);
             scene->AddObject(object2);
             scene->AddObject(object3);
+            scene->AddLight(light);
 
             scene->Commit();
 
@@ -59,10 +64,12 @@ int main() {
             object1->Release();
             object2->Release();
             object3->Release();
+            light->Release();
 
             render->Release();
             camera->Release();
-            model->Release();
+            plane->Release();
+            helmet->Release();
             scene->Release();
             context->Release();
         }

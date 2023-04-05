@@ -36,6 +36,7 @@ set(HEADERS
     include/Renderer.h
     include/Camera.h
     include/InputManager.h
+    include/Light.h
 )
 
 set(SOURCE
@@ -55,6 +56,7 @@ set(SOURCE
     src/Renderer.cpp
     src/Camera.cpp
     src/InputManager.cpp
+    src/Light.cpp
 )
 
 set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")

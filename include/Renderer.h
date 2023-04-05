@@ -32,6 +32,7 @@ private:
         glm::mat4 projInverse;
     };
     void UpdateCameraUniforms(Camera* camera);
+    void UpdateLightUniforms();
 
     Context* mContext;
     Scene* mScene;
@@ -42,6 +43,8 @@ private:
 
     VulkanBuffer* mCameraUniformBuffer;
     VulkanBuffer* mSceneUniformBuffer;
+    VulkanBuffer* mLightMetadataUniformBuffer;
+    VulkanBuffer* mLightUniformBuffer;
 
     RayTracingPipeline* mPipeline;
     vk::DescriptorPool mDescriptorPool;

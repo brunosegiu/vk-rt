@@ -34,6 +34,7 @@ private:
 
     Context* mContext;
     vk::DescriptorSetLayout mDescriptorLayout;
+    std::vector<vk::DescriptorPoolSize> mDescriptorSizes;
     vk::PipelineLayout mLayout;
     vk::Pipeline mPipeline;
     std::vector<vk::ShaderModule> mShaders;

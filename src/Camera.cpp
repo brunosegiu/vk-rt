@@ -23,6 +23,7 @@ Camera::Camera(Window* window)
         static_cast<double>(windowSize.width) / static_cast<double>(windowSize.height),
         0.01,
         1000.0);
+    mProjectionTransform[1][1] *= -1.0f;
 }
 
 void Camera::UpdateViewTransform() {
@@ -106,7 +107,7 @@ void Camera::OnKeyReleased(int key) {
 void Camera::OnMouseMoved(glm::vec2 newPos) {
     if (mActive) {
         glm::vec2 delta = newPos - mCurrentMousePos;
-        Rotate(glm::vec3(-delta.y * mRotationSpeed, delta.x * mRotationSpeed, 0.0f));
+        Rotate(glm::vec3(delta.y * mRotationSpeed, delta.x * mRotationSpeed, 0.0f));
     }
     mCurrentMousePos = newPos;
 }

@@ -16,12 +16,24 @@ struct Vertex {
   vec2 texCoord;
 };
 
+struct Light {
+  vec3 position;
+  float intensity;
+};
+
 layout(location = 0) rayPayloadInEXT vec3 hitValue;
 hitAttributeEXT vec2 attribs;
 
 layout(buffer_reference, scalar) buffer Vertices {Vertex v[]; };
 layout(buffer_reference, scalar) buffer Indices {uvec3 i[]; };
 layout(binding = 3, set = 0, scalar) buffer Description_ { Description i[]; } descriptions;
+layout(binding = 4, set = 0) uniform LightMetadata {
+  uint lightCount;
+} lightMetadata;
+layout(binding = 5, set = 0, scalar) buffer LightData 
+{
+	Light lights[];
+} lightData;
 
 void main() {
   Description description = descriptions.i[gl_InstanceCustomIndexEXT];
@@ -38,16 +50,20 @@ void main() {
   const vec3 position = v0.position * barycentricCoords.x + v1.position * barycentricCoords.y + v2.position * barycentricCoords.z;
   const vec3 worldSpacePosition = vec3(gl_ObjectToWorldEXT * vec4(position, 1.0));
   
-  const vec3 normal = v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z;
+  vec3 normal = v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z;
   const vec3 worldSpaceNormal = normalize(vec3(normal * gl_WorldToObjectEXT));
 
-  vec3 lightPos = vec3(0.0f, -5.0f, -5.0f);
-  vec3 lightDir = lightPos - worldSpacePosition;
-  const float lightDistance = length(lightDir);
-  const float lightIntensity = 1000.0f / (lightDistance * lightDistance);
-  lightDir = lightDir / lightDistance;
-
-  float nDotL = max(dot(worldSpaceNormal, lightDir), 0.0);
-  vec3 color = vec3(0.7f, 0.7f, 0.7f);
-  hitValue = color * nDotL + vec3(0.07f);
+  vec3 color = vec3(0.0);
+  vec3 albedo = vec3(0.5, 0.5, 0.5);
+  for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
+    Light light = lightData.lights[lightIndex];
+    const vec3 lightPos = light.position;
+    vec3 lightDir = lightPos - worldSpacePosition;
+    const float lightDistance = length(lightDir);
+    const float lightIntensity = light.intensity / (lightDistance * lightDistance);
+    lightDir = lightDir / lightDistance;
+    const float nDotL = max(dot(worldSpaceNormal, lightDir), 0.0);
+    color = color + albedo * nDotL * lightIntensity;
+  }
+  hitValue = color;
 }

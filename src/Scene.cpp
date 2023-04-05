@@ -15,13 +15,32 @@ Scene::Scene(Context* context)
 
 void Scene::AddObject(Object* object) {
     VKRT_ASSERT(!mCommitted);
-    mObjects.emplace_back(object);
+    if (object != nullptr) {
+        mObjects.emplace_back(object);
+    }
+}
+
+void Scene::AddLight(Light* light) {
+    if (light != nullptr) {
+        mLights.emplace_back(light);
+    }
 }
 
 std::vector<Model::Description> Scene::GetDescriptions() {
     std::vector<Model::Description> descriptions;
     for (Object* object : mObjects) {
         descriptions.emplace_back(object->GetModel()->GetDescription());
+    }
+    return descriptions;
+}
+
+std::vector<Light::Description> Scene::GetLightDescriptions() {
+    std::vector<Light::Description> descriptions;
+    for (Light* light : mLights) {
+        Light::Description description{
+            .position = light->GetPosition(),
+            .intensity = light->GetIntensity()};
+        descriptions.emplace_back(description);
     }
     return descriptions;
 }

@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "Light.h"
 #include "Object.h"
 #include "RefCountPtr.h"
 #include "VulkanBase.h"
@@ -16,9 +17,12 @@ public:
     Scene(Context* context);
 
     void AddObject(Object* object);
+    void AddLight(Light* light);
+
     const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
     std::vector<Model::Description> GetDescriptions();
+    std::vector<Light::Description> GetLightDescriptions();
 
     void Commit();
 
@@ -28,6 +32,7 @@ private:
     Context* mContext;
 
     std::vector<Object*> mObjects;
+    std::vector<Light*> mLights;
 
     bool mCommitted;
     VulkanBuffer* mInstanceBuffer;

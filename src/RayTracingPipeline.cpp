@@ -1,5 +1,7 @@
 #include "RayTracingPipeline.h"
 
+#include <unordered_map>
+
 #include "Context.h"
 #include "DebugUtils.h"
 
@@ -37,13 +39,44 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setDescriptorCount(1)
             .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
 
+    vk::DescriptorSetLayoutBinding lightMetadataUniformBinding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(4)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorCount(1)
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+
+    vk::DescriptorSetLayoutBinding lightUniformBufferBinding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(5)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setDescriptorCount(1)
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+
     std::vector<vk::DescriptorSetLayoutBinding> descriptorBindings{
         accelerationStructureLayoutBinding,
         resultImageLayoutBinding,
         cameraUniformBufferBinding,
-        sceneUniformBufferBinding};
-    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+        sceneUniformBufferBinding,
+        lightMetadataUniformBinding,
+        lightUniformBufferBinding};
 
+    std::unordered_map<vk::DescriptorType, uint32_t> descriptorSizes;
+    for (const vk::DescriptorSetLayoutBinding& binding : descriptorBindings) {
+        auto it = descriptorSizes.find(binding.descriptorType);
+        if (it == descriptorSizes.end()) {
+            descriptorSizes[binding.descriptorType] = 1;
+        } else {
+            descriptorSizes[binding.descriptorType] += 1;
+        }
+    }
+
+    mDescriptorSizes = std::vector<vk::DescriptorPoolSize>();
+    for (auto descriptorSize : descriptorSizes) {
+        mDescriptorSizes.emplace_back(descriptorSize.first, descriptorSize.second);
+    }
+
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo =
         vk::DescriptorSetLayoutCreateInfo().setBindings(descriptorBindings);
     mDescriptorLayout =
@@ -180,13 +213,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
 }
 
 const std::vector<vk::DescriptorPoolSize>& RayTracingPipeline::GetDescriptorSizes() const {
-    static std::vector<vk::DescriptorPoolSize> poolSizes{
-        vk::DescriptorPoolSize(vk::DescriptorType::eAccelerationStructureKHR, 1),
-        vk::DescriptorPoolSize(vk::DescriptorType::eStorageImage, 1),
-        vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1),
-        vk::DescriptorPoolSize(vk::DescriptorType::eStorageBuffer, 1),
-    };
-    return poolSizes;
+    return mDescriptorSizes;
 }
 
 vk::ShaderModule RayTracingPipeline::LoadShader(Resource::Id shaderId) {

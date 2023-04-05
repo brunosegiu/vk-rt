@@ -16,7 +16,14 @@ Model* Model::Load(Context* context, const std::string& path) {
     tinygltf::TinyGLTF loader;
     std::string err;
     std::string warn;
-    if (loader.LoadBinaryFromFile(&model, &err, &warn, path)) {
+    bool isProperlyLoaded = false;
+    if (path.ends_with(".gltf")) {
+        isProperlyLoaded = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+    } else {
+        isProperlyLoaded = loader.LoadBinaryFromFile(&model, &err, &warn, path);
+    }
+
+    if (isProperlyLoaded) {
         if (!model.nodes.empty()) {
             const int32_t meshIndex = model.nodes.front().mesh;
             const tinygltf::Mesh& mesh = model.meshes[meshIndex];

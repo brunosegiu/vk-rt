@@ -74,23 +74,57 @@ void Renderer::CreateStorageImage() {
 }
 
 void Renderer::CreateUniformBuffer() {
-    mCameraUniformBuffer = mContext->GetDevice()->CreateBuffer(
-        sizeof(UniformData),
-        vk::BufferUsageFlagBits::eUniformBuffer,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    {
+        mCameraUniformBuffer = mContext->GetDevice()->CreateBuffer(
+            sizeof(UniformData),
+            vk::BufferUsageFlagBits::eUniformBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+    }
 
-    const std::vector<Model::Description> descriptions = mScene->GetDescriptions();
-    const size_t descriptionsBufferSize = sizeof(Model::Description) * descriptions.size();
-    mSceneUniformBuffer = mContext->GetDevice()->CreateBuffer(
-        descriptionsBufferSize,
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-    uint8_t* buffer = mSceneUniformBuffer->MapBuffer();
-    std::copy_n(
-        reinterpret_cast<const uint8_t*>(descriptions.data()),
-        descriptionsBufferSize,
-        buffer);
-    mSceneUniformBuffer->UnmapBuffer();
+    {
+        const std::vector<Model::Description> descriptions = mScene->GetDescriptions();
+        const size_t descriptionsBufferSize = sizeof(Model::Description) * descriptions.size();
+        mSceneUniformBuffer = mContext->GetDevice()->CreateBuffer(
+            descriptionsBufferSize,
+            vk::BufferUsageFlagBits::eStorageBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        uint8_t* buffer = mSceneUniformBuffer->MapBuffer();
+        std::copy_n(
+            reinterpret_cast<const uint8_t*>(descriptions.data()),
+            descriptionsBufferSize,
+            buffer);
+        mSceneUniformBuffer->UnmapBuffer();
+    }
+
+    {
+        const std::vector<Light::Description> descriptions = mScene->GetLightDescriptions();
+        {
+            mLightMetadataUniformBuffer = mContext->GetDevice()->CreateBuffer(
+                sizeof(uint32_t),
+                vk::BufferUsageFlagBits::eUniformBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                    vk::MemoryPropertyFlagBits::eHostCoherent);
+            uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
+            const uint32_t lightCount = descriptions.size();
+            std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
+            mLightMetadataUniformBuffer->UnmapBuffer();
+        }
+
+        {
+            const size_t descriptionsBufferSize = sizeof(Light::Description) * descriptions.size();
+            mLightUniformBuffer = mContext->GetDevice()->CreateBuffer(
+                descriptionsBufferSize,
+                vk::BufferUsageFlagBits::eStorageBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                    vk::MemoryPropertyFlagBits::eHostCoherent);
+            uint8_t* buffer = mLightUniformBuffer->MapBuffer();
+            std::copy_n(
+                reinterpret_cast<const uint8_t*>(descriptions.data()),
+                descriptionsBufferSize,
+                buffer);
+            mLightUniformBuffer->UnmapBuffer();
+        }
+    }
 }
 
 void Renderer::UpdateCameraUniforms(Camera* camera) {
@@ -100,6 +134,49 @@ void Renderer::UpdateCameraUniforms(Camera* camera) {
         .projInverse = glm::inverse(camera->GetProjectionTransform())};
     std::copy_n(reinterpret_cast<uint8_t*>(&cameraMatrices), sizeof(UniformData), buffer);
     mCameraUniformBuffer->UnmapBuffer();
+}
+
+void Renderer::UpdateLightUniforms() {
+    const std::vector<Light::Description> descriptions = mScene->GetLightDescriptions();
+    {
+        uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
+        const uint32_t lightCount = descriptions.size();
+        std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
+        mLightMetadataUniformBuffer->UnmapBuffer();
+    }
+
+    {
+        const size_t descriptionsBufferSize = sizeof(Light::Description) * descriptions.size();
+        if (descriptionsBufferSize != mLightUniformBuffer->GetBufferSize()) {
+            mLightUniformBuffer->Release();
+            mLightUniformBuffer = mContext->GetDevice()->CreateBuffer(
+                descriptionsBufferSize,
+                vk::BufferUsageFlagBits::eUniformBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                    vk::MemoryPropertyFlagBits::eHostCoherent);
+            uint8_t* buffer = mLightUniformBuffer->MapBuffer();
+            std::copy_n(
+                reinterpret_cast<const uint8_t*>(descriptions.data()),
+                descriptionsBufferSize,
+                buffer);
+            mLightUniformBuffer->UnmapBuffer();
+            vk::WriteDescriptorSet lightUniformBufferWrite =
+                vk::WriteDescriptorSet()
+                    .setDstSet(mDescriptorSet)
+                    .setDstBinding(5)
+                    .setDescriptorCount(1)
+                    .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+                    .setBufferInfo(mLightUniformBuffer->GetDescriptorInfo());
+            vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+            logicalDevice.updateDescriptorSets(lightUniformBufferWrite, nullptr);
+        }
+        uint8_t* buffer = mLightUniformBuffer->MapBuffer();
+        std::copy_n(
+            reinterpret_cast<const uint8_t*>(descriptions.data()),
+            descriptionsBufferSize,
+            buffer);
+        mLightUniformBuffer->UnmapBuffer();
+    }
 }
 
 void Renderer::CreateDescriptors() {
@@ -153,17 +230,36 @@ void Renderer::CreateDescriptors() {
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setBufferInfo(mSceneUniformBuffer->GetDescriptorInfo());
 
+    vk::WriteDescriptorSet lightMetadataUniformBufferWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(4)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+            .setBufferInfo(mLightMetadataUniformBuffer->GetDescriptorInfo());
+
+    vk::WriteDescriptorSet lightUniformBufferWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(5)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setBufferInfo(mLightUniformBuffer->GetDescriptorInfo());
+
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
         accelerationStructureWrite,
         imageWrite,
         cameraUniformBufferWrite,
-        sceneUniformBufferWrite};
+        sceneUniformBufferWrite,
+        lightMetadataUniformBufferWrite,
+        lightUniformBufferWrite};
 
     logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
 }
 
 void Renderer::Render(Camera* camera) {
     UpdateCameraUniforms(camera);
+    UpdateLightUniforms();
 
     mContext->GetSwapchain()->AcquireNextImage();
 
@@ -322,6 +418,8 @@ Renderer::~Renderer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyDescriptorPool(mDescriptorPool);
 
+    mLightUniformBuffer->Release();
+    mLightMetadataUniformBuffer->Release();
     mCameraUniformBuffer->Release();
     mSceneUniformBuffer->Release();
 
