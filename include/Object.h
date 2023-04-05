@@ -18,6 +18,8 @@ public:
 
     void Rotate(const glm::vec3& delta);
 
+    void Scale(const glm::vec3& delta);
+
     ~Object();
 
 private:
@@ -26,6 +28,7 @@ private:
     Model* mModel;
     glm::mat4 mTransform;
     glm::vec3 mEulerRotation;
+    glm::vec3 mScale;
     glm::vec3 mPosition;
 };
 

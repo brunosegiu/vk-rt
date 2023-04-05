@@ -17,6 +17,7 @@ namespace VKRT {
 INCBIN(GenShader, "raytrace.rgen.spv");
 INCBIN(HitShader, "raytrace.rchit.spv");
 INCBIN(MissShader, "raytrace.rmiss.spv");
+INCBIN(ShadowMissShader, "raytraceShadow.rmiss.spv");
 }  // namespace VKRT
 #endif
 
@@ -34,6 +35,9 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
             break;
         case Resource::Id::MissShader:
             actualId = VKRT_RESOURCE_RAYTRACE_MISS_SHADER;
+            break;
+        case Resource::Id::ShadowMissShader:
+            actualId = VKRT_RESOURCE_RAYTRACE_SHADOW_MISS_SHADER;
             break;
         default:
             return {nullptr, 0};
@@ -70,6 +74,9 @@ Resource ResourceLoader::Load(const Resource::Id& resourceId) {
         } break;
         case Resource::Id::MissShader: {
             return Resource{.buffer = gMissShaderData, .size = gMissShaderSize};
+        } break;
+        case Resource::Id::ShadowMissShader: {
+            return Resource{.buffer = gShadowMissShaderData, .size = gShadowMissShaderSize};
         } break;
         default:
             return {nullptr, 0};

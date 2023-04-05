@@ -65,6 +65,7 @@ set(SHADERS
     raytrace.rgen
     raytrace.rchit
     raytrace.rmiss
+    raytraceShadow.rmiss
 )
 
 if(WIN32)

@@ -22,8 +22,10 @@ struct Light {
 };
 
 layout(location = 0) rayPayloadInEXT vec3 hitValue;
+layout(location = 1) rayPayloadEXT bool isShadowed;
 hitAttributeEXT vec2 attribs;
 
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(buffer_reference, scalar) buffer Vertices {Vertex v[]; };
 layout(buffer_reference, scalar) buffer Indices {uvec3 i[]; };
 layout(binding = 3, set = 0, scalar) buffer Description_ { Description i[]; } descriptions;
@@ -63,7 +65,34 @@ void main() {
     const float lightIntensity = light.intensity / (lightDistance * lightDistance);
     lightDir = lightDir / lightDistance;
     const float nDotL = max(dot(worldSpaceNormal, lightDir), 0.0);
-    color = color + albedo * nDotL * lightIntensity;
+    float attenuation = 1.0;
+    if(nDotL > 0.0) {
+      float tMin   = 0.001;
+      float tMax   = lightDistance;
+      vec3  origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+      vec3  rayDir = lightDir;
+      uint  flags =
+          gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+      isShadowed = true;
+      traceRayEXT(topLevelAS,  // acceleration structure
+              flags,       // rayFlags
+              0xFF,        // cullMask
+              0,           // sbtRecordOffset
+              0,           // sbtRecordStride
+              1,           // missIndex
+              origin,      // ray origin
+              tMin,        // ray min range
+              rayDir,      // ray direction
+              tMax,        // ray max range
+              1            // payload (location = 1)
+      );
+
+      if(isShadowed)
+      {
+        attenuation = 0.0;
+      }
+    }
+    color = color + albedo * nDotL * lightIntensity * attenuation;
   }
   hitValue = color;
 }

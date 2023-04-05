@@ -7,7 +7,11 @@
 namespace VKRT {
 
 Object::Object(Model* model)
-    : mModel(model), mTransform(1.0f), mPosition(0.0f), mEulerRotation(0.0f) {
+    : mModel(model),
+      mTransform(1.0f),
+      mPosition(0.0f),
+      mEulerRotation(0.0f),
+      mScale(1.0f, 1.0f, 1.0f) {
     mModel->AddRef();
 }
 
@@ -26,6 +30,11 @@ void Object::Rotate(const glm::vec3& delta) {
     UpdateTransform();
 }
 
+void Object::Scale(const glm::vec3& delta) {
+    mScale += delta;
+    UpdateTransform();
+}
+
 void Object::UpdateTransform() {
     glm::mat4 rotationTransform = glm::mat4(1.0f);
     rotationTransform =
@@ -34,10 +43,10 @@ void Object::UpdateTransform() {
         glm::rotate(rotationTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
     rotationTransform =
         glm::rotate(rotationTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-
+    glm::mat4 scaleTransform = glm::scale(glm::mat4(1.0f), mScale);
     glm::mat4 translationTransform = glm::translate(glm::mat4(1.0f), mPosition);
 
-    mTransform = translationTransform * rotationTransform;
+    mTransform = translationTransform * scaleTransform * rotationTransform;
 }
 
 Object::~Object() {

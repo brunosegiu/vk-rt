@@ -5,7 +5,7 @@
 #include "Context.h"
 #include "DebugUtils.h"
 
-enum class RayTracingStage { Generate = 0, Hit, Miss };
+enum class RayTracingStage { Generate = 0, Hit, Miss, ShadowMiss };
 
 namespace VKRT {
 RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
@@ -16,7 +16,8 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setBinding(0)
             .setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
             .setDescriptorCount(1)
-            .setStageFlags(vk::ShaderStageFlagBits::eRaygenKHR);
+            .setStageFlags(
+                vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR);
 
     vk::DescriptorSetLayoutBinding resultImageLayoutBinding =
         vk::DescriptorSetLayoutBinding()
@@ -86,6 +87,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         LoadShader(Resource::Id::GenShader),
         LoadShader(Resource::Id::HitShader),
         LoadShader(Resource::Id::MissShader),
+        LoadShader(Resource::Id::ShadowMissShader),
     };
 
     std::vector<vk::PipelineShaderStageCreateInfo> stageCreateInfos{
@@ -100,7 +102,12 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         vk::PipelineShaderStageCreateInfo()
             .setPName("main")
             .setModule(mShaders.at(static_cast<uint32_t>(RayTracingStage::Miss)))
-            .setStage(vk::ShaderStageFlagBits::eMissKHR)};
+            .setStage(vk::ShaderStageFlagBits::eMissKHR),
+        vk::PipelineShaderStageCreateInfo()
+            .setPName("main")
+            .setModule(mShaders.at(static_cast<uint32_t>(RayTracingStage::ShadowMiss)))
+            .setStage(vk::ShaderStageFlagBits::eMissKHR),
+    };
 
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> rayTracingGroupCreateInfos{
         vk::RayTracingShaderGroupCreateInfoKHR()
@@ -122,6 +129,13 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setIntersectionShader(VK_SHADER_UNUSED_KHR)
             .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
             .setGeneralShader(static_cast<uint32_t>(RayTracingStage::Miss)),
+        vk::RayTracingShaderGroupCreateInfoKHR()
+            .setAnyHitShader(VK_SHADER_UNUSED_KHR)
+            .setClosestHitShader(VK_SHADER_UNUSED_KHR)
+            .setGeneralShader(VK_SHADER_UNUSED_KHR)
+            .setIntersectionShader(VK_SHADER_UNUSED_KHR)
+            .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+            .setGeneralShader(static_cast<uint32_t>(RayTracingStage::ShadowMiss)),
     };
 
     vk::PipelineLayoutCreateInfo layoutCreateInfo =
@@ -132,7 +146,8 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         vk::RayTracingPipelineCreateInfoKHR()
             .setStages(stageCreateInfos)
             .setGroups(rayTracingGroupCreateInfos)
-            .setMaxPipelineRayRecursionDepth(1)
+            .setMaxPipelineRayRecursionDepth(
+                mContext->GetDevice()->GetRayTracingProperties().maxRayRecursionDepth)
             .setLayout(mLayout);
     mPipeline = VKRT_ASSERT_VK(logicalDevice.createRayTracingPipelineKHR(
         {},
@@ -183,7 +198,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
 
     {
         mRayMissTable = mContext->GetDevice()->CreateBuffer(
-            mHandleSize,
+            mHandleSize * 2,
             vk::BufferUsageFlagBits::eShaderBindingTableKHR |
                 vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
@@ -191,7 +206,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         uint8_t* rayMissTableData = mRayMissTable->MapBuffer();
         std::copy_n(
             shaderHandleStorage.begin() + mHandleSizeAligned * 2,
-            mHandleSize,
+            mHandleSize * 2,
             rayMissTableData);
         mRayMissTable->UnmapBuffer();
     }
@@ -207,7 +222,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
                       .setStride(mHandleSizeAligned),
         .rayMiss = vk::StridedDeviceAddressRegionKHR()
                        .setDeviceAddress(mRayMissTable->GetDeviceAddress())
-                       .setSize(mHandleSizeAligned)
+                       .setSize(mHandleSizeAligned * 2)
                        .setStride(mHandleSizeAligned),
         .callable = vk::StridedDeviceAddressRegionKHR()};
 }

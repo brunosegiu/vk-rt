@@ -32,23 +32,30 @@ int main() {
             Model* plane =
                 Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/plane.gltf");
             Camera* camera = new Camera(window);
-            camera->SetTranslation(glm::vec3(0.0f, 0.0f, -4.0f));
+            camera->SetTranslation(glm::vec3(0.0f, 0.0f, 4.0f));
+            camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
             Light* light = new Light();
-            light->SetPosition(glm::vec3(0.0f, 5.0f, -4.0f));
-            light->SetIntensity(100.0f);
+            light->SetPosition(glm::vec3(0.0f, 3.0f, -2.0f));
+            light->SetIntensity(70.0f);
+            Light* light2 = new Light();
+            light2->SetPosition(glm::vec3(0.0f, 5.0f, -7.0f));
+            light2->SetIntensity(50.0f);
             Object* object1 = new Object(helmet);
-            object1->SetTranslation(glm::vec3(-3.0f, 0.0f, 0.0f));
-            object1->Rotate(glm::vec3(-90.0f, 0.0f, 0.0f));
+            object1->SetTranslation(glm::vec3(-2.0f, 0.0f, 0.0f));
+            object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             Object* object2 = new Object(helmet);
-            object2->Rotate(glm::vec3(0.0f, 90.0f, 0.0f));
+            object2->SetTranslation(glm::vec3(2.0f, 0.0f, 0.0f));
+            object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             Object* object3 = new Object(plane);
             object3->SetTranslation(glm::vec3(0.0f, -5.0f, 0.0f));
             object3->Rotate(glm::vec3(0.0f, 0.0f, 0.0f));
+            object3->Scale(glm::vec3(10.0f, 10.0f, 10.0f));
 
             scene->AddObject(object1);
             scene->AddObject(object2);
             scene->AddObject(object3);
             scene->AddLight(light);
+            scene->AddLight(light2);
 
             scene->Commit();
 
@@ -65,6 +72,7 @@ int main() {
             object2->Release();
             object3->Release();
             light->Release();
+            light2->Release();
 
             render->Release();
             camera->Release();

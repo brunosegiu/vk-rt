@@ -1,6 +1,9 @@
 #include <windows.h>
 #include "ShaderResources.h"
 
+// clang-format off
+
 VKRT_RESOURCE_RAYTRACE_GEN_SHADER RCDATA "C:/Users/bruno/Code/vk-rt/shaders/raytrace.rgen.spv"
 VKRT_RESOURCE_RAYTRACE_HIT_SHADER RCDATA "C:/Users/bruno/Code/vk-rt/shaders/raytrace.rchit.spv" 
 VKRT_RESOURCE_RAYTRACE_MISS_SHADER RCDATA "C:/Users/bruno/Code/vk-rt/shaders/raytrace.rmiss.spv"
+VKRT_RESOURCE_RAYTRACE_SHADOW_MISS_SHADER RCDATA "C:/Users/bruno/Code/vk-rt/shaders/raytraceShadow.rmiss.spv"
