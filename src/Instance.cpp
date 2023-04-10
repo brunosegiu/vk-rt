@@ -173,15 +173,18 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(
                         return std::string(extensionName) ==
                                std::string(presentExtension.extensionName.data());
                     }) != deviceExtensions.end();
+                    if (!isExtensionSupported) {
+                          VKRT_LOG("No extension " << extensionName);
+                    }
             allExtensionsSupported = allExtensionsSupported && isExtensionSupported;
         }
         if (!allExtensionsSupported) {
-            chosenDeviceScore = 0;
+            currentDeviceScore = 0;
         }
 
         const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
         if (!deviceFeatures.shaderInt64) {
-            chosenDeviceScore = 0;
+            currentDeviceScore = 0;
         }
 
         if (chosenDeviceScore < currentDeviceScore) {

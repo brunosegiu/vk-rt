@@ -53,10 +53,10 @@ Swapchain::Swapchain(Context* context) : mContext(context), mCurrentImageIndex(0
                 surfaceCaps.maxImageExtent.height));
     }
 
-    uint32_t imageCount = std::clamp<uint32_t>(
-        surfaceCaps.minImageCount + 1,
-        surfaceCaps.minImageCount,
-        surfaceCaps.maxImageCount);
+    uint32_t imageCount = surfaceCaps.minImageCount + 1;
+    if (surfaceCaps.maxImageCount != 0 && imageCount > surfaceCaps.maxImageCount) {
+        imageCount = surfaceCaps.maxImageCount;
+    }
 
     vk::SwapchainCreateInfoKHR swapchainCreateInfo =
         vk::SwapchainCreateInfoKHR()

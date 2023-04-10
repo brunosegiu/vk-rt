@@ -11,7 +11,7 @@
 
 #else
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #define VKRT_DEBUG
 #endif
 
