@@ -5,6 +5,7 @@
         "glfw3",
         "glm",
         "tinygltf",
-        "nlohmann-json"
+        "nlohmann-json",
+        "sdl2"
     ]
 }

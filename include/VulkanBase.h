@@ -8,8 +8,6 @@
 #define VULKAN_HPP_ASSERT(condition)
 #endif
 
-#ifdef VKRT_PLATFORM_WINDOWS
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif
+#define VKRT_ENABLE_VALIDATION
 
 #include <vulkan/vulkan.hpp>

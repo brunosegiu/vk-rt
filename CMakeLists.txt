@@ -127,6 +127,13 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_path(NLOHMANN_JSON_INCLUDE nlohmann/json.hpp)
 include_directories(${NLOHMANN_JSON_INCLUDE})
 
+find_package(SDL2 CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME}
+    PRIVATE
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
+
 if(UNIX)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/incbin)
 endif()

@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 
+#include <SDL2/SDL.h>
+
 #include "Macros.h"
 #include "VulkanBase.h"
 
@@ -34,8 +36,6 @@
 #define VKRT_ASSERT_MSG(condition, message)                                                     \
     {                                                                                           \
         if (!(condition)) {                                                                     \
-            std::string fileInfo = message;                                                     \
-            std::wstring wInfo = std::wstring(fileInfo.begin(), fileInfo.end());                \
             VKRT_LOG(                                                                           \
                 "In file: " << __FILE__ << ", line: " << __LINE__ << " of function: "           \
                             << __FUNCTION__ << "Condition failed : " << #condition << std::endl \
@@ -44,7 +44,21 @@
         }                                                                                       \
     }
 #else
+#if defined(VKRT_PLATFORM_WINDOWS)
+#define VKRT_ASSERT_MSG(condition, message)                                                      \
+    {                                                                                            \
+        if (!(condition)) {                                                                      \
+            std::ostringstream os_;                                                              \
+            os_ << "In file: " << __FILE__ << ", line: " << __LINE__                             \
+                << " of function: " << __FUNCTION__ << "Condition failed : " << #condition       \
+                << std::endl                                                                     \
+                << message << std::endl;                                                         \
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", os_.str().c_str(), nullptr); \
+        }                                                                                        \
+    }
+#else
 #define VKRT_ASSERT_MSG(condition, message) VKRT_UNUSED(condition)
+#endif
 #endif
 
 #define VKRT_ASSERT(condition) VKRT_ASSERT_MSG(condition, "")

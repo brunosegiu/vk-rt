@@ -5,8 +5,6 @@
 #include "VulkanBase.h"
 #include "Window.h"
 
-#define VKRT_ENABLE_VALIDATION
-
 namespace VKRT {
 class Instance : public RefCountPtr {
 public:

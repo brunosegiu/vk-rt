@@ -296,12 +296,11 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
             .setBufferInfo(mLightUniformBuffer->GetDescriptorInfo());
 
     auto sampler = vk::DescriptorImageInfo().setSampler(mTextureSampler);
-    vk::WriteDescriptorSet samplerWrite =
-        vk::WriteDescriptorSet()
-            .setDstSet(mDescriptorSet)
-            .setDstBinding(6)
-            .setDescriptorCount(1)
-            .setDescriptorType(vk::DescriptorType::eSampler)
+    vk::WriteDescriptorSet samplerWrite = vk::WriteDescriptorSet()
+                                              .setDstSet(mDescriptorSet)
+                                              .setDstBinding(6)
+                                              .setDescriptorCount(1)
+                                              .setDescriptorType(vk::DescriptorType::eSampler)
                                               .setImageInfo(sampler);
 
     vk::WriteDescriptorSet materialsWrite =
@@ -340,9 +339,7 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
         materialsWrite,
         texturesWrite};
 
-    logicalDevice.updateDescriptorSets(
-        writeDescriptorSets,
-        {});
+    logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
 }
 
 void Renderer::Render(Camera* camera) {
