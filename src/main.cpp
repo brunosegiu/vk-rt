@@ -35,11 +35,14 @@ int main() {
             camera->SetTranslation(glm::vec3(0.0f, 0.0f, 4.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
             Light* light = new Light();
-            light->SetPosition(glm::vec3(0.0f, 3.0f, -2.0f));
-            light->SetIntensity(70.0f);
+            light->SetPosition(glm::vec3(4.0f, 2.0f, -2.0f));
+            light->SetIntensity(20.0f);
             Light* light2 = new Light();
-            light2->SetPosition(glm::vec3(0.0f, 5.0f, -7.0f));
-            light2->SetIntensity(50.0f);
+            light2->SetPosition(glm::vec3(-4.0f, 2.0f, -2.0f));
+            light2->SetIntensity(30.0f);
+            Light* light3 = new Light();
+            light3->SetPosition(glm::vec3(0.0f, 4.0f, -4.0f));
+            light3->SetIntensity(30.0f);
             Object* object1 = new Object(helmet);
             object1->SetTranslation(glm::vec3(-2.0f, 0.0f, 0.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
@@ -54,8 +57,10 @@ int main() {
             scene->AddObject(object1);
             scene->AddObject(object2);
             scene->AddObject(object3);
-            scene->AddLight(light);
-            scene->AddLight(light2);
+
+            // scene->AddLight(light);
+            // scene->AddLight(light2);
+            scene->AddLight(light3);
 
             scene->Commit();
 
@@ -73,6 +78,7 @@ int main() {
             object3->Release();
             light->Release();
             light2->Release();
+            light3->Release();
 
             render->Release();
             camera->Release();

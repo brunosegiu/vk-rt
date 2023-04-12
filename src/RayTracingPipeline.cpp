@@ -54,13 +54,44 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setDescriptorCount(1)
             .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
 
+    vk::DescriptorSetLayoutBinding samplerBinding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(6)
+            .setDescriptorType(vk::DescriptorType::eSampler)
+            .setDescriptorCount(1)
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+
+    vk::DescriptorSetLayoutBinding materialBinding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(7)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setDescriptorCount(1)
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+    constexpr uint32_t MaxBoundTextures = 2048;
+    vk::DescriptorSetLayoutBinding texturesBinding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(8)
+            .setDescriptorType(vk::DescriptorType::eSampledImage)
+            .setDescriptorCount(MaxBoundTextures)
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+
     std::vector<vk::DescriptorSetLayoutBinding> descriptorBindings{
         accelerationStructureLayoutBinding,
         resultImageLayoutBinding,
         cameraUniformBufferBinding,
         sceneUniformBufferBinding,
         lightMetadataUniformBinding,
-        lightUniformBufferBinding};
+        lightUniformBufferBinding,
+        samplerBinding,
+        materialBinding,
+        texturesBinding,
+    };
+
+    std::vector<vk::DescriptorBindingFlags> bindingFlags(
+        descriptorBindings.size(),
+        vk::DescriptorBindingFlags{});
+
+    bindingFlags[8] = vk::DescriptorBindingFlagBits::eVariableDescriptorCount;
 
     std::unordered_map<vk::DescriptorType, uint32_t> descriptorSizes;
     for (const vk::DescriptorSetLayoutBinding& binding : descriptorBindings) {
@@ -78,8 +109,14 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
     }
 
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+
+    vk::DescriptorSetLayoutBindingFlagsCreateInfo layoutFlagsCreateInfo =
+        vk::DescriptorSetLayoutBindingFlagsCreateInfo().setBindingFlags(bindingFlags);
+
     vk::DescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo =
-        vk::DescriptorSetLayoutCreateInfo().setBindings(descriptorBindings);
+        vk::DescriptorSetLayoutCreateInfo()
+            .setBindings(descriptorBindings)
+            .setPNext(&layoutFlagsCreateInfo);
     mDescriptorLayout =
         VKRT_ASSERT_VK(logicalDevice.createDescriptorSetLayout(descriptorSetLayoutCreateInfo));
 

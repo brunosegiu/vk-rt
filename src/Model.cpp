@@ -1,13 +1,11 @@
 #include "Model.h"
 
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYGLTF_NO_INCLUDE_JSON
 #include "nlohmann/json.hpp"
 #include "tiny_gltf.h"
 
 #include "DebugUtils.h"
+#include "Material.h"
+#include "Texture.h"
 
 namespace VKRT {
 
@@ -22,7 +20,7 @@ Model* Model::Load(Context* context, const std::string& path) {
     } else {
         isProperlyLoaded = loader.LoadBinaryFromFile(&model, &err, &warn, path);
     }
-
+    constexpr int32_t invalidIndex = -1;
     if (isProperlyLoaded) {
         if (!model.nodes.empty()) {
             const int32_t meshIndex = model.nodes.front().mesh;
@@ -133,7 +131,64 @@ Model* Model::Load(Context* context, const std::string& path) {
                     indices.emplace_back(triangle);
                 }
             }
-            return new Model(context, vertices, indices);
+
+            const int32_t materialIndex = primitive.material;
+            Material* material = nullptr;
+            if (materialIndex >= 0) {
+                const tinygltf::Material& gltfMaterial = model.materials[materialIndex];
+
+                const std::vector<double>& baseColor =
+                    gltfMaterial.pbrMetallicRoughness.baseColorFactor;
+                glm::vec3 albedo = glm::vec3(baseColor[0], baseColor[1], baseColor[2]);
+                float roughness = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
+
+                const int32_t albedoTextureIndex =
+                    gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+                Texture* albedoTexture = nullptr;
+                if (albedoTextureIndex >= 0) {
+                    const tinygltf::Texture& texture = model.textures[albedoTextureIndex];
+                    const tinygltf::Image& image = model.images[texture.source];
+                    albedoTexture = new Texture(
+                        context,
+                        image.width,
+                        image.height,
+                        vk::Format::eR8G8B8A8Unorm,
+                        image.image.data(),
+                        image.image.size());
+                }
+
+                const int32_t roughnessTextureIndex =
+                    gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+                gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+                Texture* roughnessTexture = nullptr;
+                if (roughnessTextureIndex >= 0) {
+                    const tinygltf::Texture& texture = model.textures[roughnessTextureIndex];
+                    const tinygltf::Image& image = model.images[texture.source];
+                    roughnessTexture = new Texture(
+                        context,
+                        image.width,
+                        image.height,
+                        vk::Format::eR8G8B8A8Unorm,
+                        image.image.data(),
+                        image.image.size());
+                }
+
+                material = new Material(albedo, roughness, albedoTexture, roughnessTexture);
+
+                if (albedoTexture != nullptr) {
+                    albedoTexture->Release();
+                }
+
+                if (roughnessTexture != nullptr) {
+                    roughnessTexture->Release();
+                }
+            } else {
+                material = new Material();
+            }
+
+            Model* model = new Model(context, vertices, indices, material);
+            material->Release();
+            return model;
         }
     }
     return nullptr;
@@ -142,9 +197,11 @@ Model* Model::Load(Context* context, const std::string& path) {
 Model::Model(
     Context* context,
     const std::vector<Vertex>& vertices,
-    const std::vector<glm::uvec3>& indices)
-    : mContext(context) {
+    const std::vector<glm::uvec3>& indices,
+    Material* material)
+    : mContext(context), mMaterial(material) {
     mContext->AddRef();
+    mMaterial->AddRef();
 
     uint32_t triangleCount = indices.size();
     VkTransformMatrixKHR transformMatrix =
@@ -282,7 +339,7 @@ Model::Model(
     scratchBuffer->Release();
 }
 
-Model::Description Model::GetDescription() {
+Model::Description Model::GetDescription() const {
     return Model::Description{
         .vertexBufferAddress = mVertexBuffer->GetDeviceAddress(),
         .indexBufferAddress = mIndexBuffer->GetDeviceAddress()};

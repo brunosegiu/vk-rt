@@ -28,7 +28,7 @@ void Scene::AddLight(Light* light) {
 
 std::vector<Model::Description> Scene::GetDescriptions() {
     std::vector<Model::Description> descriptions;
-    for (Object* object : mObjects) {
+    for (const Object* object : mObjects) {
         descriptions.emplace_back(object->GetModel()->GetDescription());
     }
     return descriptions;
@@ -43,6 +43,88 @@ std::vector<Light::Description> Scene::GetLightDescriptions() {
         descriptions.emplace_back(description);
     }
     return descriptions;
+}
+
+Scene::SceneMaterials Scene::GetMaterialProxies() {
+    // Gather textures first
+    std::vector<std::pair<const Texture*, int32_t>> textureIndices;
+    int32_t currentTextureIndex = 0;
+    for (const Object* object : mObjects) {
+        const Material* material = object->GetModel()->GetMaterial();
+        {
+            const Texture* albedoTexture = material->GetAlbedoTexture();
+            if (albedoTexture != nullptr) {
+                auto albedoIt = std::find_if(
+                    textureIndices.begin(),
+                    textureIndices.end(),
+                    [&albedoTexture](const auto& entry) { return entry.first == albedoTexture; });
+
+                if (albedoIt == textureIndices.end()) {
+                    textureIndices.emplace_back(albedoTexture, currentTextureIndex);
+                    ++currentTextureIndex;
+                }
+            }
+        }
+        {
+            const Texture* roughnessTexture = material->GetRoughnessTexture();
+            if (roughnessTexture != nullptr) {
+                auto roughnessIt = std::find_if(
+                    textureIndices.begin(),
+                    textureIndices.end(),
+                    [&roughnessTexture](const auto& entry) {
+                        return entry.first == roughnessTexture;
+                    });
+                if (roughnessIt == textureIndices.end()) {
+                    textureIndices.emplace_back(roughnessTexture, currentTextureIndex);
+                    ++currentTextureIndex;
+                }
+            }
+        }
+    }
+
+    // Gather materials and generate texture indices if applicable
+    std::vector<MaterialProxy> materials;
+    for (const Object* object : mObjects) {
+        const Material* material = object->GetModel()->GetMaterial();
+        MaterialProxy proxy{
+            .albedo = material->GetAlbedo(),
+            .roughness = material->GetRoughness(),
+            .albedoTextureIndex = -1,
+            .roughnessTextureIndex = -1,
+        };
+        {
+            const Texture* albedoTexture = material->GetAlbedoTexture();
+            auto albedoIt = std::find_if(
+                textureIndices.begin(),
+                textureIndices.end(),
+                [&albedoTexture](const auto& entry) { return entry.first == albedoTexture; });
+            if (albedoIt != textureIndices.end()) {
+                proxy.albedoTextureIndex = albedoIt->second;
+            }
+        }
+        {
+            const Texture* roughnessTexture = material->GetRoughnessTexture();
+            auto roughnessIt = std::find_if(
+                textureIndices.begin(),
+                textureIndices.end(),
+                [&roughnessTexture](const auto& entry) { return entry.first == roughnessTexture; });
+            if (roughnessIt != textureIndices.end()) {
+                proxy.roughnessTextureIndex = roughnessIt->second;
+            }
+        }
+        materials.push_back(proxy);
+    }
+
+    std::vector<const Texture*> textures;
+    for (const auto& entry : textureIndices) {
+        textures.push_back(entry.first);
+    }
+
+    Scene::SceneMaterials sceneMaterials{
+        .materials = materials,
+        .textures = textures,
+    };
+    return sceneMaterials;
 }
 
 void Scene::Commit() {

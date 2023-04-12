@@ -38,24 +38,31 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::
                                                     .setQueueFamilyIndex(queueFamilyIndex)
                                                     .setQueuePriorities(queuePriorities);
 
-    vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures =
-        vk::PhysicalDeviceBufferDeviceAddressFeatures().setBufferDeviceAddress(true);
+    vk::PhysicalDeviceFeatures enabledFeatures = vk::PhysicalDeviceFeatures().setShaderInt64(true);
 
     vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures =
-        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true).setPNext(
-            &bufferDeviceAddressFeatures);
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true);
 
     vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures =
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR()
             .setAccelerationStructure(true)
             .setPNext(&rayTracingFeatures);
-    const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
+
+    vk::PhysicalDeviceVulkan12Features enabledFeatures12 =
+        vk::PhysicalDeviceVulkan12Features()
+            .setScalarBlockLayout(true)
+            .setBufferDeviceAddress(true)
+            .setDescriptorIndexing(true)
+            .setRuntimeDescriptorArray(true)
+            .setDescriptorBindingVariableDescriptorCount(true)
+            .setPNext(&accelerationStructureFeatures);
+
     const vk::DeviceCreateInfo deviceCreateInfo =
         vk::DeviceCreateInfo()
             .setQueueCreateInfos(queueCreateInfo)
-            .setPNext(&accelerationStructureFeatures)
             .setPEnabledExtensionNames(Instance::sRequiredDeviceExtensions)
-            .setPEnabledFeatures(&deviceFeatures);
+            .setPEnabledFeatures(&enabledFeatures)
+            .setPNext(&enabledFeatures12);
     mLogicalDevice = VKRT_ASSERT_VK(mPhysicalDevice.createDevice(deviceCreateInfo));
 
     mGraphicsQueue = mLogicalDevice.getQueue(queueFamilyIndex, 0);

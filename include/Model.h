@@ -3,6 +3,7 @@
 #include "glm/glm.hpp"
 
 #include "Context.h"
+#include "Material.h"
 #include "RefCountPtr.h"
 #include "VulkanBase.h"
 #include "VulkanBuffer.h"
@@ -21,15 +22,17 @@ public:
     Model(
         Context* context,
         const std::vector<Vertex>& vertices,
-        const std::vector<glm::uvec3>& indices);
+        const std::vector<glm::uvec3>& indices,
+        Material* material);
 
     struct Description {
         vk::DeviceAddress vertexBufferAddress;
         vk::DeviceAddress indexBufferAddress;
     };
-    Description GetDescription();
+    Description GetDescription() const;
 
-    vk::DeviceAddress GetBLASAddress() { return mBLASAddress; }
+    vk::DeviceAddress GetBLASAddress() const { return mBLASAddress; }
+    const Material* GetMaterial() const { return mMaterial; }
 
     ~Model();
 
@@ -43,6 +46,8 @@ private:
     VulkanBuffer* mBLASBuffer;
     vk::AccelerationStructureKHR mBLAS;
     vk::DeviceAddress mBLASAddress;
+
+    Material* mMaterial;
 };
 
 }  // namespace VKRT

@@ -24,6 +24,18 @@ public:
     std::vector<Model::Description> GetDescriptions();
     std::vector<Light::Description> GetLightDescriptions();
 
+    struct MaterialProxy {
+        glm::vec3 albedo;
+        float roughness;
+        int32_t albedoTextureIndex;
+        int32_t roughnessTextureIndex;
+    };
+    struct SceneMaterials {
+        std::vector<MaterialProxy> materials;
+        std::vector<const Texture*> textures;
+    };
+    SceneMaterials GetMaterialProxies();
+
     void Commit();
 
     ~Scene();

@@ -10,8 +10,8 @@ class Object : public RefCountPtr {
 public:
     Object(Model* model);
 
-    Model* GetModel() { return mModel; }
-    const glm::mat4& GetTransform() { return mTransform; }
+    const Model* GetModel() const { return mModel; }
+    const glm::mat4& GetTransform() const { return mTransform; }
 
     void SetTranslation(const glm::vec3& position);
     void Translate(const glm::vec3& delta);

@@ -173,9 +173,9 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(
                         return std::string(extensionName) ==
                                std::string(presentExtension.extensionName.data());
                     }) != deviceExtensions.end();
-                    if (!isExtensionSupported) {
-                          VKRT_LOG("No extension " << extensionName);
-                    }
+            if (!isExtensionSupported) {
+                VKRT_LOG("No extension " << extensionName);
+            }
             allExtensionsSupported = allExtensionsSupported && isExtensionSupported;
         }
         if (!allExtensionsSupported) {
@@ -184,6 +184,20 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(
 
         const vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
         if (!deviceFeatures.shaderInt64) {
+            currentDeviceScore = 0;
+        }
+
+        vk::PhysicalDeviceVulkan11Features physicalDeviceFeatures1_1{};
+        vk::PhysicalDeviceVulkan12Features physicalDeviceFeatures1_2{};
+        physicalDeviceFeatures1_1.setPNext(&physicalDeviceFeatures1_2);
+        vk::PhysicalDeviceFeatures2 physicalDeviceFeatures =
+            vk::PhysicalDeviceFeatures2().setPNext(&physicalDeviceFeatures1_1);
+        physicalDevice.getFeatures2(&physicalDeviceFeatures);
+
+        if (!physicalDeviceFeatures1_2.scalarBlockLayout ||
+            !physicalDeviceFeatures1_2.descriptorIndexing ||
+            !physicalDeviceFeatures1_2.runtimeDescriptorArray ||
+            !physicalDeviceFeatures1_2.descriptorBindingVariableDescriptorCount) {
             currentDeviceScore = 0;
         }
 

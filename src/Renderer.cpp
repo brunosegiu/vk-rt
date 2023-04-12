@@ -1,15 +1,18 @@
 #include "Renderer.h"
 
 #include "DebugUtils.h"
+#include "Texture.h"
 
 namespace VKRT {
 Renderer::Renderer(Context* context, Scene* scene) : mContext(context), mScene(scene) {
     mContext->AddRef();
     mScene->AddRef();
+    Scene::SceneMaterials materials = mScene->GetMaterialProxies();
     mPipeline = new RayTracingPipeline(mContext);
     CreateStorageImage();
     CreateUniformBuffer();
-    CreateDescriptors();
+    CreateMaterialUniforms(materials);
+    CreateDescriptors(materials);
 }
 
 void Renderer::CreateStorageImage() {
@@ -127,6 +130,41 @@ void Renderer::CreateUniformBuffer() {
     }
 }
 
+void Renderer::CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo) {
+    {
+        vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+        vk::SamplerCreateInfo samplerCreateInfo =
+            vk::SamplerCreateInfo()
+                .setMagFilter(vk::Filter::eLinear)
+                .setMinFilter(vk::Filter::eLinear)
+                .setMipmapMode(vk::SamplerMipmapMode::eLinear)
+                .setAddressModeU(vk::SamplerAddressMode::eRepeat)
+                .setAddressModeV(vk::SamplerAddressMode::eRepeat)
+                .setAddressModeW(vk::SamplerAddressMode::eRepeat)
+                .setMipLodBias(0.0f)
+                .setCompareOp(vk::CompareOp::eNever)
+                .setMinLod(0.0f)
+                .setMaxLod(0.0f)
+                .setMaxAnisotropy(1.0f);
+        mTextureSampler = VKRT_ASSERT_VK(logicalDevice.createSampler(samplerCreateInfo));
+    }
+
+    {
+        const size_t materialBufferSize =
+            sizeof(Scene::MaterialProxy) * materialInfo.materials.size();
+        mMaterialsBuffer = mContext->GetDevice()->CreateBuffer(
+            materialBufferSize,
+            vk::BufferUsageFlagBits::eStorageBuffer,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        uint8_t* buffer = mMaterialsBuffer->MapBuffer();
+        std::copy_n(
+            reinterpret_cast<const uint8_t*>(materialInfo.materials.data()),
+            materialBufferSize,
+            buffer);
+        mMaterialsBuffer->UnmapBuffer();
+    }
+}
+
 void Renderer::UpdateCameraUniforms(Camera* camera) {
     uint8_t* buffer = mCameraUniformBuffer->MapBuffer();
     UniformData cameraMatrices{
@@ -179,17 +217,23 @@ void Renderer::UpdateLightUniforms() {
     }
 }
 
-void Renderer::CreateDescriptors() {
+void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
     vk::DescriptorPoolCreateInfo poolCreateInfo =
         vk::DescriptorPoolCreateInfo().setPoolSizes(mPipeline->GetDescriptorSizes()).setMaxSets(1);
     mDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
 
+    std::vector<uint32_t> descriptorCounts{static_cast<uint32_t>(materialInfo.textures.size())};
+    vk::DescriptorSetVariableDescriptorCountAllocateInfo dynamicCountInfo =
+        vk::DescriptorSetVariableDescriptorCountAllocateInfo().setDescriptorCounts(
+            descriptorCounts);
+
     vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
         vk::DescriptorSetAllocateInfo()
             .setDescriptorPool(mDescriptorPool)
-            .setSetLayouts(mPipeline->GetDescriptorLayout());
+            .setSetLayouts(mPipeline->GetDescriptorLayout())
+            .setPNext(&dynamicCountInfo);
     mDescriptorSet =
         VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(descriptorAllocateInfo)).front();
 
@@ -246,13 +290,46 @@ void Renderer::CreateDescriptors() {
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setBufferInfo(mLightUniformBuffer->GetDescriptorInfo());
 
+    vk::WriteDescriptorSet samplerWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(6)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eSampler)
+            .setImageInfo(vk::DescriptorImageInfo().setSampler(mTextureSampler));
+
+    vk::WriteDescriptorSet materialsWrite =
+        vk::WriteDescriptorSet()
+            .setDstSet(mDescriptorSet)
+            .setDstBinding(7)
+            .setDescriptorCount(1)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setBufferInfo(mMaterialsBuffer->GetDescriptorInfo());
+
+    std::vector<vk::DescriptorImageInfo> imageInfos;
+    for (const auto& texture : materialInfo.textures) {
+        imageInfos.push_back(vk::DescriptorImageInfo()
+                                 .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+                                 .setImageView(texture->GetImageView()));
+    }
+
+    vk::WriteDescriptorSet texturesWrite = vk::WriteDescriptorSet()
+                                               .setDstSet(mDescriptorSet)
+                                               .setDstBinding(8)
+                                               .setDescriptorCount(1)
+                                               .setDescriptorType(vk::DescriptorType::eSampledImage)
+                                               .setImageInfo(imageInfos);
+
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
         accelerationStructureWrite,
         imageWrite,
         cameraUniformBufferWrite,
         sceneUniformBufferWrite,
         lightMetadataUniformBufferWrite,
-        lightUniformBufferWrite};
+        lightUniformBufferWrite,
+        samplerWrite,
+        materialsWrite,
+        texturesWrite};
 
     logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
 }
@@ -294,7 +371,7 @@ void Renderer::Render(Camera* camera) {
         const vk::ImageSubresourceRange subresourceRange =
             vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
-        SetImageLayout(
+        Texture::SetImageLayout(
             commandBuffer,
             currentSwapchainImage,
             vk::ImageLayout::eUndefined,
@@ -303,7 +380,7 @@ void Renderer::Render(Camera* camera) {
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        SetImageLayout(
+        Texture::SetImageLayout(
             commandBuffer,
             mStorageImage,
             vk::ImageLayout::eGeneral,
@@ -328,7 +405,7 @@ void Renderer::Render(Camera* camera) {
             vk::ImageLayout::eTransferDstOptimal,
             imageCopyRegion);
 
-        SetImageLayout(
+        Texture::SetImageLayout(
             commandBuffer,
             currentSwapchainImage,
             vk::ImageLayout::eTransferDstOptimal,
@@ -337,7 +414,7 @@ void Renderer::Render(Camera* camera) {
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        SetImageLayout(
+        Texture::SetImageLayout(
             commandBuffer,
             mStorageImage,
             vk::ImageLayout::eTransferSrcOptimal,
@@ -367,57 +444,12 @@ void Renderer::Render(Camera* camera) {
     mContext->GetSwapchain()->Present();
 }
 
-void Renderer::SetImageLayout(
-    vk::CommandBuffer& commandBuffer,
-    vk::Image& image,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout,
-    const vk::ImageSubresourceRange& subresourceRange,
-    vk::PipelineStageFlags srcStageMask,
-    vk::PipelineStageFlags dstStageMask) {
-    vk::ImageMemoryBarrier imageBarrier = vk::ImageMemoryBarrier()
-                                              .setOldLayout(oldLayout)
-                                              .setNewLayout(newLayout)
-                                              .setImage(image)
-                                              .setSubresourceRange(subresourceRange);
-
-    switch (oldLayout) {
-        case vk::ImageLayout::eUndefined:
-            imageBarrier.setSrcAccessMask(vk::AccessFlags{});
-            break;
-        case vk::ImageLayout::ePreinitialized:
-            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eHostWrite);
-            break;
-        case vk::ImageLayout::eColorAttachmentOptimal:
-            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-            break;
-        case vk::ImageLayout::eTransferSrcOptimal:
-            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eTransferRead);
-            break;
-        case vk::ImageLayout::eTransferDstOptimal:
-            imageBarrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-            break;
-    }
-
-    switch (newLayout) {
-        case vk::ImageLayout::eTransferDstOptimal:
-            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-            break;
-        case vk::ImageLayout::eTransferSrcOptimal:
-            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eTransferRead);
-            break;
-        case vk::ImageLayout::eColorAttachmentOptimal:
-            imageBarrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-            break;
-    }
-
-    commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, {}, {}, imageBarrier);
-}
-
 Renderer::~Renderer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyDescriptorPool(mDescriptorPool);
 
+    mMaterialsBuffer->Release();
+    logicalDevice.destroySampler(mTextureSampler);
     mLightUniformBuffer->Release();
     mLightMetadataUniformBuffer->Release();
     mCameraUniformBuffer->Release();

@@ -35,6 +35,8 @@ set(HEADERS
     include/Camera.h
     include/InputManager.h
     include/Light.h
+    include/Texture.h
+    include/Material.h
 )
 
 set(SOURCE
@@ -55,6 +57,8 @@ set(SOURCE
     src/Camera.cpp
     src/InputManager.cpp
     src/Light.cpp
+    src/Texture.cpp
+    src/Material.cpp
 )
 
 set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
@@ -112,6 +116,10 @@ add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 
+add_compile_definitions(TINYGLTF_IMPLEMENTATION)
+add_compile_definitions(STB_IMAGE_IMPLEMENTATION)
+add_compile_definitions(STB_IMAGE_WRITE_IMPLEMENTATION)
+add_compile_definitions(TINYGLTF_NO_INCLUDE_JSON)
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(${PROJECT_NAME} PRIVATE ${TINYGLTF_INCLUDE_DIRS})
 

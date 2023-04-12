@@ -18,15 +18,8 @@ public:
 private:
     void CreateStorageImage();
     void CreateUniformBuffer();
-    void CreateDescriptors();
-    void SetImageLayout(
-        vk::CommandBuffer& commandBuffer,
-        vk::Image& image,
-        vk::ImageLayout oldLayout,
-        vk::ImageLayout newLayout,
-        const vk::ImageSubresourceRange& subresourceRange,
-        vk::PipelineStageFlags srcStageMask,
-        vk::PipelineStageFlags dstStageMask);
+    void CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo);
+    void CreateDescriptors(const Scene::SceneMaterials& materialInfo);
     struct UniformData {
         glm::mat4 viewInverse;
         glm::mat4 projInverse;
@@ -45,10 +38,13 @@ private:
     VulkanBuffer* mSceneUniformBuffer;
     VulkanBuffer* mLightMetadataUniformBuffer;
     VulkanBuffer* mLightUniformBuffer;
+    VulkanBuffer* mMaterialsBuffer;
 
     RayTracingPipeline* mPipeline;
     vk::DescriptorPool mDescriptorPool;
     vk::DescriptorSet mDescriptorSet;
+
+    vk::Sampler mTextureSampler;
 };
 
 }  // namespace VKRT

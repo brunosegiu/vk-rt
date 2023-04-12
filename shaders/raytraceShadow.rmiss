@@ -1,9 +1,10 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 
-layout(location = 1) rayPayloadInEXT bool isShadowed;
+const uint ShadowIndex = 1;
 
-void main()
-{
+layout(location = ShadowIndex) rayPayloadInEXT bool isShadowed;
+
+void main() {
   isShadowed = false;
 }

@@ -14,7 +14,7 @@ public:
         const vk::DeviceSize& size,
         const vk::BufferUsageFlags& usageFlags,
         const vk::MemoryPropertyFlags& memoryFlags,
-        const vk::MemoryAllocateFlags& memoryAllocateFlags);
+        const vk::MemoryAllocateFlags& memoryAllocateFlags = {});
 
     const vk::DeviceSize& GetBufferSize() const { return mSize; }
     const vk::Buffer& GetBufferHandle() const { return mBufferHandle; }
