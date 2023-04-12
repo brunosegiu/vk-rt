@@ -85,8 +85,8 @@ void Renderer::CreateUniformBuffer() {
     }
 
     {
-        const std::vector<Model::Description> descriptions = mScene->GetDescriptions();
-        const size_t descriptionsBufferSize = sizeof(Model::Description) * descriptions.size();
+        const std::vector<Mesh::Description> descriptions = mScene->GetDescriptions();
+        const size_t descriptionsBufferSize = sizeof(Mesh::Description) * descriptions.size();
         mSceneUniformBuffer = mContext->GetDevice()->CreateBuffer(
             descriptionsBufferSize,
             vk::BufferUsageFlagBits::eStorageBuffer,
@@ -133,6 +133,8 @@ void Renderer::CreateUniformBuffer() {
 void Renderer::CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo) {
     {
         vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+        const float anisotropy =
+            mContext->GetDevice()->GetDeviceProperties().limits.maxSamplerAnisotropy;
         vk::SamplerCreateInfo samplerCreateInfo =
             vk::SamplerCreateInfo()
                 .setMagFilter(vk::Filter::eLinear)
@@ -145,7 +147,8 @@ void Renderer::CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo)
                 .setCompareOp(vk::CompareOp::eNever)
                 .setMinLod(0.0f)
                 .setMaxLod(0.0f)
-                .setMaxAnisotropy(1.0f);
+                .setAnisotropyEnable(true)
+                .setMaxAnisotropy(anisotropy);
         mTextureSampler = VKRT_ASSERT_VK(logicalDevice.createSampler(samplerCreateInfo));
     }
 
@@ -234,8 +237,10 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
             .setDescriptorPool(mDescriptorPool)
             .setSetLayouts(mPipeline->GetDescriptorLayout())
             .setPNext(&dynamicCountInfo);
-    mDescriptorSet =
-        VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(descriptorAllocateInfo)).front();
+    mDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(
+                                        descriptorAllocateInfo,
+                                        mContext->GetDevice()->GetDispatcher()))
+                         .front();
 
     vk::WriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo =
         vk::WriteDescriptorSetAccelerationStructureKHR().setAccelerationStructures(
@@ -290,13 +295,14 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setBufferInfo(mLightUniformBuffer->GetDescriptorInfo());
 
+    auto sampler = vk::DescriptorImageInfo().setSampler(mTextureSampler);
     vk::WriteDescriptorSet samplerWrite =
         vk::WriteDescriptorSet()
             .setDstSet(mDescriptorSet)
             .setDstBinding(6)
             .setDescriptorCount(1)
             .setDescriptorType(vk::DescriptorType::eSampler)
-            .setImageInfo(vk::DescriptorImageInfo().setSampler(mTextureSampler));
+                                              .setImageInfo(sampler);
 
     vk::WriteDescriptorSet materialsWrite =
         vk::WriteDescriptorSet()
@@ -307,18 +313,21 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
             .setBufferInfo(mMaterialsBuffer->GetDescriptorInfo());
 
     std::vector<vk::DescriptorImageInfo> imageInfos;
-    for (const auto& texture : materialInfo.textures) {
+    for (const Texture* texture : materialInfo.textures) {
         imageInfos.push_back(vk::DescriptorImageInfo()
                                  .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-                                 .setImageView(texture->GetImageView()));
+                                 .setImageView(texture->GetImageView())
+                                 .setSampler(nullptr));
     }
 
     vk::WriteDescriptorSet texturesWrite = vk::WriteDescriptorSet()
                                                .setDstSet(mDescriptorSet)
                                                .setDstBinding(8)
-                                               .setDescriptorCount(1)
                                                .setDescriptorType(vk::DescriptorType::eSampledImage)
-                                               .setImageInfo(imageInfos);
+                                               .setImageInfo(imageInfos)
+                                               .setDstArrayElement(0)
+                                               .setPBufferInfo(nullptr)
+                                               .setPTexelBufferView(nullptr);
 
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets{
         accelerationStructureWrite,
@@ -331,7 +340,9 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
         materialsWrite,
         texturesWrite};
 
-    logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
+    logicalDevice.updateDescriptorSets(
+        writeDescriptorSets,
+        {});
 }
 
 void Renderer::Render(Camera* camera) {

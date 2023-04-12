@@ -52,6 +52,7 @@ public:
     };
     SwapchainCapabilities GetSwapchainCapabilities(vk::SurfaceKHR surface);
 
+    vk::PhysicalDeviceProperties GetDeviceProperties();
     vk::PhysicalDeviceRayTracingPipelinePropertiesKHR GetRayTracingProperties();
 
     ~Device();

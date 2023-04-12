@@ -19,6 +19,7 @@ public:
     void Rotate(const glm::vec3& delta);
 
     void Scale(const glm::vec3& delta);
+    void SetScale(const glm::vec3& scale);
 
     ~Object();
 

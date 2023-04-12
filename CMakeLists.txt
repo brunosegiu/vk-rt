@@ -10,8 +10,6 @@ set(VCPKG_LIBRARY_LINKAGE "static")
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/vcpkg/scripts/buildsystems/vcpkg.cmake")
 set(VCPKG_FEATURE_FLAGS manifests)
 
-set(CMAKE_CONFIGURATION_TYPES Debug;Release)
-
 project(${PROJECT_NAME} VERSION ${VERSION} LANGUAGES CXX)
 
 set(HEADERS
@@ -37,6 +35,7 @@ set(HEADERS
     include/Light.h
     include/Texture.h
     include/Material.h
+    include/Mesh.h
 )
 
 set(SOURCE
@@ -59,6 +58,7 @@ set(SOURCE
     src/Light.cpp
     src/Texture.cpp
     src/Material.cpp
+    src/Mesh.cpp
 )
 
 set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")

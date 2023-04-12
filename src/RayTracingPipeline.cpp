@@ -67,7 +67,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setDescriptorCount(1)
             .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
-    constexpr uint32_t MaxBoundTextures = 2048;
+    constexpr uint32_t MaxBoundTextures = 64;
     vk::DescriptorSetLayoutBinding texturesBinding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(8)
@@ -97,9 +97,9 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
     for (const vk::DescriptorSetLayoutBinding& binding : descriptorBindings) {
         auto it = descriptorSizes.find(binding.descriptorType);
         if (it == descriptorSizes.end()) {
-            descriptorSizes[binding.descriptorType] = 1;
+            descriptorSizes[binding.descriptorType] = binding.descriptorCount;
         } else {
-            descriptorSizes[binding.descriptorType] += 1;
+            descriptorSizes[binding.descriptorType] += binding.descriptorCount;
         }
     }
 
@@ -117,8 +117,10 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
         vk::DescriptorSetLayoutCreateInfo()
             .setBindings(descriptorBindings)
             .setPNext(&layoutFlagsCreateInfo);
-    mDescriptorLayout =
-        VKRT_ASSERT_VK(logicalDevice.createDescriptorSetLayout(descriptorSetLayoutCreateInfo));
+    mDescriptorLayout = VKRT_ASSERT_VK(logicalDevice.createDescriptorSetLayout(
+        descriptorSetLayoutCreateInfo,
+        nullptr,
+        mContext->GetDevice()->GetDispatcher()));
 
     mShaders = std::vector<vk::ShaderModule>{
         LoadShader(Resource::Id::GenShader),

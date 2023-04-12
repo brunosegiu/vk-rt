@@ -29,56 +29,70 @@ int main() {
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
             Model* helmet = Model::Load(context, "D:/Downloads/DamagedHelmet.glb");
+            Model* sponza =
+                Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/sponza_b.gltf");
             Model* plane =
                 Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/plane.gltf");
             Camera* camera = new Camera(window);
-            camera->SetTranslation(glm::vec3(0.0f, 0.0f, 4.0f));
+            camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
             Light* light = new Light();
-            light->SetPosition(glm::vec3(4.0f, 2.0f, -2.0f));
-            light->SetIntensity(20.0f);
+            light->SetPosition(glm::vec3(-4.0f, 3.0f, 0.0f));
+            light->SetIntensity(3.0f);
+
+            Light* light1 = new Light();
+            light1->SetPosition(glm::vec3(0.0f, 2.0f, 0.0f));
+            light1->SetIntensity(3.0f);
+
             Light* light2 = new Light();
-            light2->SetPosition(glm::vec3(-4.0f, 2.0f, -2.0f));
-            light2->SetIntensity(30.0f);
-            Light* light3 = new Light();
-            light3->SetPosition(glm::vec3(0.0f, 4.0f, -4.0f));
-            light3->SetIntensity(30.0f);
+            light2->SetPosition(glm::vec3(0.0f, 1.0f, -3.0f));
+            light2->SetIntensity(10.0f);
+
             Object* object1 = new Object(helmet);
-            object1->SetTranslation(glm::vec3(-2.0f, 0.0f, 0.0f));
+            object1->SetTranslation(glm::vec3(-3.0f, 3.0f, 0.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            object1->SetScale(glm::vec3(1.5f));
             Object* object2 = new Object(helmet);
-            object2->SetTranslation(glm::vec3(2.0f, 0.0f, 0.0f));
+            object2->SetTranslation(glm::vec3(3.0f, 3.0f, 0.0f));
             object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            object2->SetScale(glm::vec3(1.25f));
             Object* object3 = new Object(plane);
-            object3->SetTranslation(glm::vec3(0.0f, -5.0f, 0.0f));
+            object3->SetTranslation(glm::vec3(0.0f, -1.0f, 0.0f));
             object3->Rotate(glm::vec3(0.0f, 0.0f, 0.0f));
-            object3->Scale(glm::vec3(10.0f, 10.0f, 10.0f));
+            object3->SetScale(glm::vec3(10.0f));
 
             scene->AddObject(object1);
             scene->AddObject(object2);
             scene->AddObject(object3);
 
             // scene->AddLight(light);
-            // scene->AddLight(light2);
-            scene->AddLight(light3);
+            scene->AddLight(light1);
+            scene->AddLight(light2);
 
             scene->Commit();
 
             Renderer* render = new Renderer(context, scene);
             Timer timer;
             double elapsedSeconds = 0.0;
+            double totalSeconds = 0.0;
             while (window->Update()) {
                 timer.Start();
+                /* light2->SetPosition(glm::vec3(
+                    3.0f + 2.0f * cos(totalSeconds),
+                    3.0f + 2.0f * cos(totalSeconds),
+                    0.0f));*/
                 camera->Update(elapsedSeconds);
                 render->Render(camera);
                 elapsedSeconds = timer.ElapsedSeconds();
+                totalSeconds += elapsedSeconds;
             }
             object1->Release();
             object2->Release();
             object3->Release();
             light->Release();
+            light1->Release();
             light2->Release();
-            light3->Release();
+            sponza->Release();
 
             render->Release();
             camera->Release();

@@ -31,7 +31,14 @@ struct Material {
 const int ColorIndex = 0;
 const int ShadowIndex = 1;
 
-layout(location = ColorIndex) rayPayloadInEXT vec3 color;
+struct RayPayload {
+    vec3 color;
+    float distance;
+    vec3 normal;
+    float reflectiveness;
+};
+
+layout(location = ColorIndex) rayPayloadInEXT RayPayload rayPayload;
 layout(location = ShadowIndex) rayPayloadEXT bool isShadowed;
 hitAttributeEXT vec2 hitAttributes;
 
@@ -69,11 +76,17 @@ void main() {
 
   Material material = materials.values[gl_InstanceCustomIndexEXT];
 
-  color = vec3(0.0);
+  vec3 color = vec3(0.0);
   vec3 albedo = material.albedo.rgb;
   if (material.albedoTextureIndex >= 0) {
     albedo = texture(sampler2D(sceneTextures[material.albedoTextureIndex], textureSampler), texCoord).rgb;
   }
+  float roughness = material.roughness;
+  if (material.roughnessTextureIndex >= 0) {
+    float roughness = texture(sampler2D(sceneTextures[material.roughnessTextureIndex], textureSampler), texCoord).r;
+  }
+  float attenuation = 1.0;
+  bool inShadow = false;
   for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
     Light light = lightData.lights[lightIndex];
     const vec3 lightPos = light.position;
@@ -89,13 +102,19 @@ void main() {
       const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
       const vec3 rayDir = lightDir;
       const uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+      
       isShadowed = true;
       traceRayEXT(topLevelAS, flags, 0xFF, 0, 0, 1, origin, tMin, rayDir, tMax, ShadowIndex);
-
       if(isShadowed) {
         attenuation = 0.0;
       }
+      inShadow = inShadow && isShadowed;
     }
-    color += color + albedo * nDotL * lightIntensity * attenuation;
+    color += color + albedo * (nDotL * lightIntensity * attenuation + 0.02);
   }
+
+  rayPayload.color = color;
+  rayPayload.distance = gl_RayTmaxEXT;
+  rayPayload.normal = worldSpaceNormal;
+  rayPayload.reflectiveness = inShadow ? 0.0 : 1.0 - roughness; 
 }

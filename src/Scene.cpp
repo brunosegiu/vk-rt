@@ -26,10 +26,11 @@ void Scene::AddLight(Light* light) {
     }
 }
 
-std::vector<Model::Description> Scene::GetDescriptions() {
-    std::vector<Model::Description> descriptions;
+std::vector<Mesh::Description> Scene::GetDescriptions() {
+    std::vector<Mesh::Description> descriptions;
     for (const Object* object : mObjects) {
-        descriptions.emplace_back(object->GetModel()->GetDescription());
+        std::vector<Mesh::Description> modelDescriptions = object->GetModel()->GetDescriptions();
+        descriptions.insert(descriptions.end(), modelDescriptions.begin(), modelDescriptions.end());
     }
     return descriptions;
 }
@@ -50,33 +51,37 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
     std::vector<std::pair<const Texture*, int32_t>> textureIndices;
     int32_t currentTextureIndex = 0;
     for (const Object* object : mObjects) {
-        const Material* material = object->GetModel()->GetMaterial();
-        {
-            const Texture* albedoTexture = material->GetAlbedoTexture();
-            if (albedoTexture != nullptr) {
-                auto albedoIt = std::find_if(
-                    textureIndices.begin(),
-                    textureIndices.end(),
-                    [&albedoTexture](const auto& entry) { return entry.first == albedoTexture; });
+        for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
+            const Material* material = mesh->GetMaterial();
+            {
+                const Texture* albedoTexture = material->GetAlbedoTexture();
+                if (albedoTexture != nullptr) {
+                    auto albedoIt = std::find_if(
+                        textureIndices.begin(),
+                        textureIndices.end(),
+                        [&albedoTexture](const auto& entry) {
+                            return entry.first == albedoTexture;
+                        });
 
-                if (albedoIt == textureIndices.end()) {
-                    textureIndices.emplace_back(albedoTexture, currentTextureIndex);
-                    ++currentTextureIndex;
+                    if (albedoIt == textureIndices.end()) {
+                        textureIndices.emplace_back(albedoTexture, currentTextureIndex);
+                        ++currentTextureIndex;
+                    }
                 }
             }
-        }
-        {
-            const Texture* roughnessTexture = material->GetRoughnessTexture();
-            if (roughnessTexture != nullptr) {
-                auto roughnessIt = std::find_if(
-                    textureIndices.begin(),
-                    textureIndices.end(),
-                    [&roughnessTexture](const auto& entry) {
-                        return entry.first == roughnessTexture;
-                    });
-                if (roughnessIt == textureIndices.end()) {
-                    textureIndices.emplace_back(roughnessTexture, currentTextureIndex);
-                    ++currentTextureIndex;
+            {
+                const Texture* roughnessTexture = material->GetRoughnessTexture();
+                if (roughnessTexture != nullptr) {
+                    auto roughnessIt = std::find_if(
+                        textureIndices.begin(),
+                        textureIndices.end(),
+                        [&roughnessTexture](const auto& entry) {
+                            return entry.first == roughnessTexture;
+                        });
+                    if (roughnessIt == textureIndices.end()) {
+                        textureIndices.emplace_back(roughnessTexture, currentTextureIndex);
+                        ++currentTextureIndex;
+                    }
                 }
             }
         }
@@ -85,34 +90,38 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
     // Gather materials and generate texture indices if applicable
     std::vector<MaterialProxy> materials;
     for (const Object* object : mObjects) {
-        const Material* material = object->GetModel()->GetMaterial();
-        MaterialProxy proxy{
-            .albedo = material->GetAlbedo(),
-            .roughness = material->GetRoughness(),
-            .albedoTextureIndex = -1,
-            .roughnessTextureIndex = -1,
-        };
-        {
-            const Texture* albedoTexture = material->GetAlbedoTexture();
-            auto albedoIt = std::find_if(
-                textureIndices.begin(),
-                textureIndices.end(),
-                [&albedoTexture](const auto& entry) { return entry.first == albedoTexture; });
-            if (albedoIt != textureIndices.end()) {
-                proxy.albedoTextureIndex = albedoIt->second;
+        for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
+            const Material* material = mesh->GetMaterial();
+            MaterialProxy proxy{
+                .albedo = material->GetAlbedo(),
+                .roughness = material->GetRoughness(),
+                .albedoTextureIndex = -1,
+                .roughnessTextureIndex = -1,
+            };
+            {
+                const Texture* albedoTexture = material->GetAlbedoTexture();
+                auto albedoIt = std::find_if(
+                    textureIndices.begin(),
+                    textureIndices.end(),
+                    [&albedoTexture](const auto& entry) { return entry.first == albedoTexture; });
+                if (albedoIt != textureIndices.end()) {
+                    proxy.albedoTextureIndex = albedoIt->second;
+                }
             }
-        }
-        {
-            const Texture* roughnessTexture = material->GetRoughnessTexture();
-            auto roughnessIt = std::find_if(
-                textureIndices.begin(),
-                textureIndices.end(),
-                [&roughnessTexture](const auto& entry) { return entry.first == roughnessTexture; });
-            if (roughnessIt != textureIndices.end()) {
-                proxy.roughnessTextureIndex = roughnessIt->second;
+            {
+                const Texture* roughnessTexture = material->GetRoughnessTexture();
+                auto roughnessIt = std::find_if(
+                    textureIndices.begin(),
+                    textureIndices.end(),
+                    [&roughnessTexture](const auto& entry) {
+                        return entry.first == roughnessTexture;
+                    });
+                if (roughnessIt != textureIndices.end()) {
+                    proxy.roughnessTextureIndex = roughnessIt->second;
+                }
             }
+            materials.push_back(proxy);
         }
-        materials.push_back(proxy);
     }
 
     std::vector<const Texture*> textures;
@@ -133,19 +142,21 @@ void Scene::Commit() {
         mCommitted = true;
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         uint32_t index = 0;
-        for (Object* object : mObjects) {
+        for (const Object* object : mObjects) {
             const glm::mat4& transform = glm::transpose(object->GetTransform());
             VkTransformMatrixKHR transformMatrix =
                 *(reinterpret_cast<const VkTransformMatrixKHR*>(&transform));
-            instances.emplace_back(
-                vk::AccelerationStructureInstanceKHR()
-                    .setTransform(transformMatrix)
-                    .setInstanceCustomIndex(index)
-                    .setAccelerationStructureReference(object->GetModel()->GetBLASAddress())
-                    .setMask(0xFF)
-                    .setInstanceShaderBindingTableRecordOffset(0)
-                    .setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable));
-            ++index;
+            for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
+                instances.emplace_back(
+                    vk::AccelerationStructureInstanceKHR()
+                        .setTransform(transformMatrix)
+                        .setInstanceCustomIndex(index)
+                        .setAccelerationStructureReference(mesh->GetBLASAddress())
+                        .setMask(0xFF)
+                        .setInstanceShaderBindingTableRecordOffset(0)
+                        .setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable));
+                ++index;
+            }
         }
 
         const size_t instanceDataSize =

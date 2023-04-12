@@ -9,9 +9,16 @@ layout(binding = 2, set = 0) uniform CameraProperties
 	mat4 projInverse;
 } cameraProperties;
 
-const uint ColorIndex = 0;
+const int ColorIndex = 0;
 
-layout(location = ColorIndex) rayPayloadEXT vec3 color;
+struct RayPayload {
+    vec3 color;
+    float distance;
+    vec3 normal;
+    float reflectiveness;
+};
+
+layout(location = ColorIndex) rayPayloadEXT RayPayload rayPayload;
 
 void main() 
 {
@@ -26,9 +33,23 @@ void main()
 	const float tMin = 0.001;
 	const float tMax = 10000.0;
 
-    color = vec3(0.0);
+	vec3 color = vec3(0.0);
 
-    traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tMin, direction.xyz, tMax, 0);
+	const uint MaxReflectionBounces = 4;
+	for (uint i = 0; i < MaxReflectionBounces; i++) {
+		traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz, tMin, direction.xyz, tMax, 0);
+		if (rayPayload.distance < 0.0) {
+			break;
+		} else if (rayPayload.reflectiveness > 0.0) {
+			const vec4 hitPos = origin + direction * rayPayload.distance;
+			origin.xyz = hitPos.xyz + rayPayload.normal * 0.001f;
+			direction.xyz = reflect(direction.xyz, rayPayload.normal);
+			color += rayPayload.color * (1.0 - rayPayload.reflectiveness);
+		} else {
+			color += rayPayload.color;
+			break;
+		}
+	}
 
 	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 0.0));
 }

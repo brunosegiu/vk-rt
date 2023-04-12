@@ -7,7 +7,7 @@
 
 namespace VKRT {
 
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT,
@@ -41,7 +41,7 @@ ResultValue<Instance*> Instance::Create(Window* window) {
                                             .setApiVersion(VK_API_VERSION_1_2);
 
     std::vector<const char*> layersToEnable {
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
         "VK_LAYER_KHRONOS_validation"
 #endif
     };
@@ -53,7 +53,7 @@ ResultValue<Instance*> Instance::Create(Window* window) {
         extensionsToEnable.push_back(requiredWindowExtension.c_str());
     }
 
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
     {
         const std::vector<const char*> debugExtensions{
             VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
@@ -102,7 +102,7 @@ Instance::Instance(const vk::Instance& instance) : mInstanceHandle(instance) {
     mDynamicDispatcher = vk::DispatchLoaderDynamic(mInstanceHandle, vkGetInstanceProcAddr);
     mDynamicDispatcher.init(mInstanceHandle, vkGetInstanceProcAddr);
 
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
     const vk::DebugUtilsMessengerCreateInfoEXT debugCallbackCreateInfo =
         vk::DebugUtilsMessengerCreateInfoEXT()
             .setMessageSeverity(
@@ -220,7 +220,7 @@ void Instance::DestroySurface(vk::SurfaceKHR surface) {
 }
 
 Instance::~Instance() {
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
     mInstanceHandle.destroyDebugUtilsMessengerEXT(mDebugMessenger, nullptr, mDynamicDispatcher);
 #endif
     mInstanceHandle.destroy();

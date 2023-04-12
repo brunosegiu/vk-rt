@@ -38,7 +38,8 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::
                                                     .setQueueFamilyIndex(queueFamilyIndex)
                                                     .setQueuePriorities(queuePriorities);
 
-    vk::PhysicalDeviceFeatures enabledFeatures = vk::PhysicalDeviceFeatures().setShaderInt64(true);
+    vk::PhysicalDeviceFeatures enabledFeatures =
+        vk::PhysicalDeviceFeatures().setShaderInt64(true).setSamplerAnisotropy(true);
 
     vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingFeatures =
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR().setRayTracingPipeline(true);
@@ -167,6 +168,10 @@ Device::SwapchainCapabilities Device::GetSwapchainCapabilities(vk::SurfaceKHR su
         .supportedPresentModes = VKRT_ASSERT_VK(mPhysicalDevice.getSurfacePresentModesKHR(surface)),
     };
     return capabilities;
+}
+
+vk::PhysicalDeviceProperties Device::GetDeviceProperties() {
+    return mPhysicalDevice.getProperties();
 }
 
 vk::PhysicalDeviceRayTracingPipelinePropertiesKHR Device::GetRayTracingProperties() {

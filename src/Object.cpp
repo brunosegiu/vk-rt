@@ -35,6 +35,11 @@ void Object::Scale(const glm::vec3& delta) {
     UpdateTransform();
 }
 
+void Object::SetScale(const glm::vec3& scale) {
+    mScale = scale;
+    UpdateTransform();
+}
+
 void Object::UpdateTransform() {
     glm::mat4 rotationTransform = glm::mat4(1.0f);
     rotationTransform =

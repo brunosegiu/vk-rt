@@ -5,6 +5,8 @@
 #include "VulkanBase.h"
 #include "Window.h"
 
+#define VKRT_ENABLE_VALIDATION
+
 namespace VKRT {
 class Instance : public RefCountPtr {
 public:
@@ -26,7 +28,7 @@ public:
 private:
     vk::Instance mInstanceHandle;
     vk::DispatchLoaderDynamic mDynamicDispatcher;
-#if defined(VKRT_DEBUG)
+#if defined(VKRT_ENABLE_VALIDATION)
     vk::DebugUtilsMessengerEXT mDebugMessenger;
 #endif
 };

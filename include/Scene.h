@@ -21,7 +21,7 @@ public:
 
     const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
-    std::vector<Model::Description> GetDescriptions();
+    std::vector<Mesh::Description> GetDescriptions();
     std::vector<Light::Description> GetLightDescriptions();
 
     struct MaterialProxy {
