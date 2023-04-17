@@ -211,7 +211,7 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(
 
 vk::SurfaceKHR Instance::CreateSurface(Window* window) {
     VkSurfaceKHR surface;
-    glfwCreateWindowSurface(mInstanceHandle, window->GetNativeHandle(), nullptr, &surface);
+    VKRT_ASSERT_VK(vk::Result(glfwCreateWindowSurface(mInstanceHandle, window->GetNativeHandle(), nullptr, &surface)));
     return surface;
 }
 

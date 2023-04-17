@@ -16,7 +16,7 @@ ResultValue<Window*> Window::Create() {
 Window::Window() : mNativeHandle(nullptr), mContext(nullptr) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     mNativeHandle = glfwCreateWindow(1280, 720, "VKRT", nullptr, nullptr);
     mInputManager = new InputManager(this);
 }

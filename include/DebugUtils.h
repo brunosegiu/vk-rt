@@ -65,10 +65,10 @@
 
 template <typename ResultValue>
 inline auto VKRT_ASSERT_VK(ResultValue resultValue) -> decltype(resultValue.value) {
-    VKRT_ASSERT(resultValue.result == vk::Result::eSuccess);
+    VKRT_ASSERT_MSG(resultValue.result == vk::Result::eSuccess, "Vulkan error " << vk::to_string(resultValue.result));
     return resultValue.value;
 }
 
 inline void VKRT_ASSERT_VK(vk::Result result) {
-    VKRT_ASSERT(result == vk::Result::eSuccess);
+    VKRT_ASSERT_MSG(result == vk::Result::eSuccess, "Vulkan error " << vk::to_string(result));
 }

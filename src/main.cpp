@@ -28,9 +28,10 @@ int main() {
         auto [contextResult, context] = window->CreateContext();
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
-            std::string userDir = "~";
-#ifdef VKRT_PLATFORM_WINDOWS
-            userDir = std::getenv("USERPROFILE");
+#if defined(VKRT_PLATFORM_WINDOWS)
+            std::string userDir = std::getenv("USERPROFILE");
+#elif defined(VKRT_PLATFORM_LINUX)
+            std::string userDir = std::getenv("HOME");
 #endif
             Model* helmet = Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
             /* Model* sponza =
