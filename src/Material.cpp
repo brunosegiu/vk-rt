@@ -5,7 +5,7 @@
 
 namespace VKRT {
 
-Material::Material() : Material(glm::vec3(1.0f), 1.0f) {}
+Material::Material() : Material(glm::vec3(0.5), 1.0f) {}
 
 Material::Material(
     const glm::vec3& albedo,

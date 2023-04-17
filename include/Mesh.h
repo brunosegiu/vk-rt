@@ -31,6 +31,7 @@ public:
 
     vk::DeviceAddress GetBLASAddress() const { return mBLASAddress; }
     const Material* GetMaterial() const { return mMaterial; }
+    Material* GetMaterial() { return mMaterial; }
 
     ~Mesh();
 

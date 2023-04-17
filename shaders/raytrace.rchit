@@ -33,9 +33,8 @@ const int ShadowIndex = 1;
 
 struct RayPayload {
     vec3 color;
-    float distance;
-    vec3 normal;
-    float reflectiveness;
+    vec3 weight;
+	  int depth;
 };
 
 layout(location = ColorIndex) rayPayloadInEXT RayPayload rayPayload;
@@ -97,24 +96,51 @@ void main() {
     const float nDotL = max(dot(worldSpaceNormal, lightDir), 0.0);
     float attenuation = 1.0;
     if(nDotL > 0.0) {
-      const float tMin   = 0.001;
-      const float tMax   = lightDistance;
-      const vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+      const float tMin  = 0.01;
+      const float tMax  = lightDistance;
+      const vec3 origin = worldSpacePosition;
       const vec3 rayDir = lightDir;
       const uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
       
       isShadowed = true;
       traceRayEXT(topLevelAS, flags, 0xFF, 0, 0, 1, origin, tMin, rayDir, tMax, ShadowIndex);
       if(isShadowed) {
-        attenuation = 0.0;
+        attenuation = 0.1;
       }
       inShadow = inShadow && isShadowed;
     }
-    color += color + albedo * (nDotL * lightIntensity * attenuation + 0.02);
+    color += color + albedo * (nDotL * lightIntensity * attenuation + 0.2);
+  }
+  
+  const vec3 rayDir = normalize(gl_WorldRayDirectionEXT);
+
+  rayPayload.color += color * rayPayload.weight;
+  rayPayload.depth += 1;
+  rayPayload.weight *= (1.0 - roughness);
+
+  if (roughness < 0.99 && rayPayload.depth < 10) {
+      vec3 reflectionDir = reflect(rayDir, worldSpaceNormal);
+      traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, worldSpacePosition, 0.001, reflectionDir, 1000.0, 0);
   }
 
-  rayPayload.color = color;
-  rayPayload.distance = gl_RayTmaxEXT;
-  rayPayload.normal = worldSpaceNormal;
-  rayPayload.reflectiveness = inShadow ? 0.0 : 1.0 - roughness; 
+  if (gl_InstanceCustomIndexEXT == 1 && rayPayload.depth < 10) {
+    rayPayload.color = albedo * 0.1;
+    rayPayload.depth += 1;
+    rayPayload.weight = vec3(1.0);
+    const float iceRefractionIndex = 1.0f / 1.31f;
+    const float NdotD = dot(worldSpaceNormal, rayDir);
+    vec3 refrNormal = worldSpaceNormal;
+    float refrEta;
+    if(NdotD > 0.0f) {
+        refrNormal = -worldSpaceNormal;
+        refrEta = 1.0f / iceRefractionIndex;
+    } else {
+        refrNormal = worldSpaceNormal;
+        refrEta = iceRefractionIndex;
+    }
+
+    vec3 origin = worldSpacePosition + rayDir * 0.001;
+    vec3 direction = refract(rayDir, refrNormal, refrEta);
+    traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, origin, 0.001, direction, 1000.0, 0);
+  }
 }

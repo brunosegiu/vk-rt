@@ -24,7 +24,13 @@ Model* Model::Load(Context* context, const std::string& path) {
     std::vector<Mesh*> meshes;
     if (isProperlyLoaded) {
         if (!model.nodes.empty()) {
-            const int32_t meshIndex = model.nodes.front().mesh;
+            int32_t meshIndex = -1;
+            auto it = model.nodes.begin();
+            meshIndex = it->mesh;
+            while (meshIndex == -1) {
+                ++it;
+                meshIndex = it->mesh;
+            }
             const tinygltf::Mesh& mesh = model.meshes[meshIndex];
             for (const tinygltf::Primitive& primitive : mesh.primitives) {
                 const std::string positionName = "POSITION";
@@ -60,7 +66,7 @@ Model* Model::Load(Context* context, const std::string& path) {
                             &positionData[vetexStride * positionIndex]);
                         positions[positionIndex] = glm::vec3(
                             positionDataFloat[0],
-                            -positionDataFloat[1],
+                            positionDataFloat[1],
                             positionDataFloat[2]);
                     }
                 }

@@ -25,6 +25,8 @@ public:
     const Texture* GetAlbedoTexture() const { return mAlbedoTexture; }
     const Texture* GetRoughnessTexture() const { return mRoughnessTexture; }
 
+    void SetRoughness(float roughness) { mRoughness = roughness; }
+
     ~Material();
 
 private:

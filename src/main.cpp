@@ -28,11 +28,21 @@ int main() {
         auto [contextResult, context] = window->CreateContext();
         if (contextResult == Result::Success) {
             Scene* scene = new Scene(context);
-            Model* helmet = Model::Load(context, "D:/Downloads/DamagedHelmet.glb");
-            Model* sponza =
-                Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/sponza_b.gltf");
-            Model* plane =
-                Model::Load(context, "C:/Users/bruno/Code/Vulkan/data/models/plane.gltf");
+            std::string userDir = "~";
+#ifdef VKRT_PLATFORM_WINDOWS
+            userDir = std::getenv("USERPROFILE");
+#endif
+            Model* helmet = Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
+            /* Model* sponza =
+                Model::Load(context, userDir + "/assets/sponza_b.gltf");*/
+            Model* plane = Model::Load(context, userDir + "/assets/plane.gltf");
+            Model* venus = Model::Load(context, userDir + "/assets/venus.gltf");
+            std::for_each(venus->GetMeshes().begin(), venus->GetMeshes().end(), [](Mesh* mesh) {
+                mesh->GetMaterial()->SetRoughness(1.0f);
+            });
+            std::for_each(plane->GetMeshes().begin(), plane->GetMeshes().end(), [](Mesh* mesh) {
+                mesh->GetMaterial()->SetRoughness(0.8f);
+            });
             Camera* camera = new Camera(window);
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
@@ -52,10 +62,10 @@ int main() {
             object1->SetTranslation(glm::vec3(-3.0f, 3.0f, 0.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object1->SetScale(glm::vec3(1.5f));
-            Object* object2 = new Object(helmet);
+            Object* object2 = new Object(venus);
             object2->SetTranslation(glm::vec3(3.0f, 3.0f, 0.0f));
             object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            object2->SetScale(glm::vec3(1.25f));
+            object2->SetScale(glm::vec3(.2f));
             Object* object3 = new Object(plane);
             object3->SetTranslation(glm::vec3(0.0f, -1.0f, 0.0f));
             object3->Rotate(glm::vec3(0.0f, 0.0f, 0.0f));
@@ -92,7 +102,7 @@ int main() {
             light->Release();
             light1->Release();
             light2->Release();
-            sponza->Release();
+            // sponza->Release();
 
             render->Release();
             camera->Release();
