@@ -436,20 +436,26 @@ void Renderer::Render(Camera* camera) {
 
     const vk::Queue& queue = mContext->GetDevice()->GetQueue();
     vk::Fence fence = mContext->GetDevice()->CreateFence();
+
+    std::vector<vk::Semaphore> waitSemaphores{mContext->GetSwapchain()->GetPresentSemaphore()};
+    std::vector<vk::Semaphore> signalSemaphores{mContext->GetSwapchain()->GetRenderSemaphore()};
+    std::vector<vk::PipelineStageFlags> waitStages{vk::PipelineStageFlagBits::eAllCommands};
     VKRT_ASSERT_VK(queue.submit(
         vk::SubmitInfo()
             .setCommandBuffers(commandBuffer)
-            .setWaitSemaphores(mContext->GetSwapchain()->GetPresentSemaphore())
-            .setSignalSemaphores(mContext->GetSwapchain()->GetRenderSemaphore()),
+            .setWaitSemaphores(waitSemaphores)
+            .setSignalSemaphores(signalSemaphores)
+            .setWaitDstStageMask(waitStages),
         fence));
     VKRT_ASSERT_VK(mContext->GetDevice()->GetLogicalDevice().waitForFences(
         fence,
         true,
         std::numeric_limits<uint64_t>::max()));
-    mContext->GetDevice()->DestroyFence(fence);
-    mContext->GetDevice()->DestroyCommand(commandBuffer);
 
     mContext->GetSwapchain()->Present();
+
+    mContext->GetDevice()->DestroyFence(fence);
+    mContext->GetDevice()->DestroyCommand(commandBuffer);
 }
 
 Renderer::~Renderer() {

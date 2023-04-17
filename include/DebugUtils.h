@@ -23,9 +23,9 @@
 #if defined(VKRT_PLATFORM_WINDOWS)
 #define VKRT_LOG(message)                      \
     {                                          \
-        std::wostringstream os_;               \
+        std::ostringstream os_;                \
         os_ << message << std::endl;           \
-        OutputDebugStringW(os_.str().c_str()); \
+        OutputDebugStringA(os_.str().c_str()); \
     }
 #elif defined(VKRT_PLATFORM_LINUX)
 #define VKRT_LOG(message) \
@@ -65,7 +65,9 @@
 
 template <typename ResultValue>
 inline auto VKRT_ASSERT_VK(ResultValue resultValue) -> decltype(resultValue.value) {
-    VKRT_ASSERT_MSG(resultValue.result == vk::Result::eSuccess, "Vulkan error " << vk::to_string(resultValue.result));
+    VKRT_ASSERT_MSG(
+        resultValue.result == vk::Result::eSuccess,
+        "Vulkan error " << vk::to_string(resultValue.result));
     return resultValue.value;
 }
 
