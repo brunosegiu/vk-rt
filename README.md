@@ -1,2 +1,2 @@
 # Vulkan realtime raytracing playground
-![Suz](https://user-images.githubusercontent.com/38514393/229195129-eabd18a5-5e5b-4f2c-8435-32e08e81997b.gif)
+![scene](https://user-images.githubusercontent.com/38514393/232591628-235bee71-1eaa-4086-9106-7ec8fd13bb05.gif)
