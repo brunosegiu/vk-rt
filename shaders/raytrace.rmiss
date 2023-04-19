@@ -6,14 +6,12 @@
 
 #include "definitions.glsl"
 
-layout(binding = 4, set = 0) uniform LightMetadata {
+layout(binding = 4, set = 0, scalar) uniform LightMetadata {
     uint lightCount;
+    vec3 sunDirection;
 }
 lightMetadata;
-layout(binding = 5, set = 0, scalar) buffer LightData {
-    Light values[];
-}
-lights;
+
 layout(location = ColorPayloadIndex) rayPayloadInEXT RayPayload rayPayload;
 
 // From: https://github.com/nvpro-samples/nvpro_core/blob/master/nvvkhl/shaders/dh_sky.h
@@ -83,7 +81,6 @@ vec3 getProceduralSkyColor(
 }
 
 void main() {
-    ProceduralSkyShaderParameters params =
-        initSkyShaderParameters(-lights.values[0].directionOrPosition);
+    ProceduralSkyShaderParameters params = initSkyShaderParameters(-lightMetadata.sunDirection.xyz);
     rayPayload.color += getProceduralSkyColor(params, gl_WorldRayDirectionEXT, 0);
 }

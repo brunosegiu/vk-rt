@@ -50,33 +50,18 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
     for (const Object* object : mObjects) {
         for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
             const Material* material = mesh->GetMaterial();
-            {
-                const Texture* albedoTexture = material->GetAlbedoTexture();
-                if (albedoTexture != nullptr) {
-                    auto albedoIt = std::find_if(
+            std::vector<const Texture*> meshTextures{
+                material->GetAlbedoTexture(),
+                material->GetRoughnessTexture()};
+            for (const Texture* texture : meshTextures) {
+                if (texture != nullptr) {
+                    auto it = std::find_if(
                         textureIndices.begin(),
                         textureIndices.end(),
-                        [&albedoTexture](const auto& entry) {
-                            return entry.first == albedoTexture;
-                        });
+                        [&texture](const auto& entry) { return entry.first == texture; });
 
-                    if (albedoIt == textureIndices.end()) {
-                        textureIndices.emplace_back(albedoTexture, currentTextureIndex);
-                        ++currentTextureIndex;
-                    }
-                }
-            }
-            {
-                const Texture* roughnessTexture = material->GetRoughnessTexture();
-                if (roughnessTexture != nullptr) {
-                    auto roughnessIt = std::find_if(
-                        textureIndices.begin(),
-                        textureIndices.end(),
-                        [&roughnessTexture](const auto& entry) {
-                            return entry.first == roughnessTexture;
-                        });
-                    if (roughnessIt == textureIndices.end()) {
-                        textureIndices.emplace_back(roughnessTexture, currentTextureIndex);
+                    if (it == textureIndices.end()) {
+                        textureIndices.emplace_back(texture, currentTextureIndex);
                         ++currentTextureIndex;
                     }
                 }

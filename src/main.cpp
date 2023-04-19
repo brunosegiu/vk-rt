@@ -47,14 +47,18 @@ int main() {
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
             DirectionalLight* light = new DirectionalLight();
-            light->SetIntensity(1.0f);
+            light->SetIntensity(0.5f);
+
+            PointLight* pointLight = new PointLight();
+            pointLight->SetIntensity(30.0f);
+            pointLight->SetPosition(glm::vec3(0.0f, 80.3f, -3.0f));
 
             Object* object1 = new Object(helmet);
-            object1->SetTranslation(glm::vec3(-3.0f, 3.0f, 0.0f));
+            object1->SetTranslation(glm::vec3(-4.0f, 3.0f, 2.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object1->SetScale(glm::vec3(1.5f));
             Object* object2 = new Object(venus);
-            object2->SetTranslation(glm::vec3(3.0f, 3.0f, -5.0f));
+            object2->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
             object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object2->SetScale(glm::vec3(.5f));
             Object* object3 = new Object(sphere);
@@ -70,6 +74,7 @@ int main() {
             scene->AddObject(object4);
 
             scene->AddLight(light);
+            scene->AddLight(pointLight);
 
             scene->Commit();
 
@@ -79,7 +84,8 @@ int main() {
             double totalSeconds = 0.0;
             while (window->Update()) {
                 light->SetDirection(glm::normalize(
-                    glm::vec3(0.4f * cos(totalSeconds), -1.0f, 0.3f * sin(totalSeconds))));
+                    glm::vec3(0.2f * cos(totalSeconds), -1.0f, 0.2f * sin(totalSeconds))));
+                pointLight->SetPosition(glm::vec3(-35.0f, 3.0f, 5.5f * cos(totalSeconds)));
                 timer.Start();
                 camera->Update(elapsedSeconds);
                 render->Render(camera);

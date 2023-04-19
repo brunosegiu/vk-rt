@@ -43,6 +43,11 @@ void Renderer::CreateStorageImage() {
     mContext->GetDevice()->DestroyCommand(commandBuffer);
 }
 
+struct LightMetadata {
+    uint32_t lightCount;
+    glm::vec3 sunDir;
+};
+
 void Renderer::CreateUniformBuffer() {
     {
         mCameraUniformBuffer = mContext->GetDevice()->CreateBuffer(
@@ -70,13 +75,22 @@ void Renderer::CreateUniformBuffer() {
         const std::vector<Light::Proxy> lightProxies = mScene->GetLightDescriptions();
         {
             mLightMetadataUniformBuffer = mContext->GetDevice()->CreateBuffer(
-                sizeof(uint32_t),
+                sizeof(LightMetadata),
                 vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::MemoryPropertyFlagBits::eHostVisible |
                     vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
-            const uint32_t lightCount = lightProxies.size();
-            std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
+            auto sunIt = std::find_if(
+                lightProxies.begin(),
+                lightProxies.end(),
+                [](const Light::Proxy& proxy) { return proxy.type == Light::Type::Directional; });
+            glm::vec3 sunDirection = sunIt != lightProxies.end() ? sunIt->directionOrPosition
+                                                                 : glm::vec3(0.0f, -1.0f, 0.0f);
+            LightMetadata data{
+                .lightCount = static_cast<uint32_t>(lightProxies.size()),
+                .sunDir = sunDirection,
+            };
+            std::copy_n(reinterpret_cast<const uint8_t*>(&data), sizeof(LightMetadata), buffer);
             mLightMetadataUniformBuffer->UnmapBuffer();
         }
 
@@ -148,8 +162,17 @@ void Renderer::UpdateLightUniforms() {
     const std::vector<Light::Proxy> lightProxies = mScene->GetLightDescriptions();
     {
         uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
-        const uint32_t lightCount = lightProxies.size();
-        std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
+        auto sunIt =
+            std::find_if(lightProxies.begin(), lightProxies.end(), [](const Light::Proxy& proxy) {
+                return proxy.type == Light::Type::Directional;
+            });
+        glm::vec3 sunDirection =
+            sunIt != lightProxies.end() ? sunIt->directionOrPosition : glm::vec3(0.0f, -1.0f, 0.0f);
+        LightMetadata data{
+            .lightCount = static_cast<uint32_t>(lightProxies.size()),
+            .sunDir = sunDirection,
+        };
+        std::copy_n(reinterpret_cast<const uint8_t*>(&data), sizeof(LightMetadata), buffer);
         mLightMetadataUniformBuffer->UnmapBuffer();
     }
 

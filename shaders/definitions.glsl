@@ -6,7 +6,7 @@ const int ShadowPayloadIndex = 1;
 const int ColorMissIndex = 0;
 const int ShadowMissIndex = 1;
 
-const float TMin = 0.01f;
+const float TMin = 0.001f;
 const float TMax = 1000.0f;
 const uint DefaultCullMask = 0xFF;
 const uint DefaultSBTOffset = 0;
@@ -14,7 +14,7 @@ const uint DefaultSBTStride = 0;
 
 const vec3 AmbientTerm = vec3(0.05);
 
-const float MetallicCuttoff = 0.99f;
+const float MetallicCuttoff = 0.01f;
 const float Bias = 0.01f;
 
 struct MeshDescription {

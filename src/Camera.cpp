@@ -10,6 +10,7 @@ Camera::Camera(Window* window)
       mMovementSpeed(2.0f),
       mRotationSpeed(100.0f),
       mActive(false),
+      mSpeedModifierActive(false),
       mCurrentMousePos(0.0, 0.0) {
     mWindow->AddRef();
     InputManager* inputManager = mWindow->GetInputManager();
@@ -89,6 +90,11 @@ void Camera::OnKeyPressed(int key) {
         mKeyStates.rightPressed = true;
     } else if (key == GLFW_KEY_A) {
         mKeyStates.leftPressed = true;
+    } else if (key == GLFW_KEY_LEFT_SHIFT) {
+        if (!mSpeedModifierActive) {
+            mMovementSpeed *= 10.0f;
+            mSpeedModifierActive = true;
+        }
     }
 }
 
@@ -101,6 +107,11 @@ void Camera::OnKeyReleased(int key) {
         mKeyStates.rightPressed = false;
     } else if (key == GLFW_KEY_A) {
         mKeyStates.leftPressed = false;
+    } else if (key == GLFW_KEY_LEFT_SHIFT) {
+        if (mSpeedModifierActive) {
+            mMovementSpeed /= 10.0f;
+            mSpeedModifierActive = false;
+        }
     }
 }
 

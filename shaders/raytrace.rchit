@@ -23,8 +23,9 @@ layout(binding = 3, set = 0, scalar) buffer Description_ {
     MeshDescription values[];
 }
 descriptions;
-layout(binding = 4, set = 0) uniform LightMetadata {
+layout(binding = 4, set = 0, scalar) uniform LightMetadata {
     uint lightCount;
+    vec3 sunDirection;
 }
 lightMetadata;
 layout(binding = 5, set = 0, scalar) buffer LightData {
@@ -79,33 +80,41 @@ vec3 getAlbedo(const Material material, const vec2 texCoord) {
     return albedo;
 }
 
-float getRoughness(const Material material, const vec2 texCoord) {
-    float roughness = material.roughness;
+void getRoughnessAndMetallic(
+    const Material material,
+    const vec2 texCoord,
+    out float roughness,
+    out float metallic) {
+    roughness = material.roughness;
+    metallic = material.metallic;
     if (material.roughnessTextureIndex >= 0) {
-        roughness = texture(
-                        sampler2D(sceneTextures[material.roughnessTextureIndex], textureSampler),
-                        texCoord)
-                        .r;
+        vec4 textureSample = texture(
+            sampler2D(sceneTextures[material.roughnessTextureIndex], textureSampler),
+            texCoord);
+        metallic = textureSample.b;
+        roughness = textureSample.g;
     }
-    return roughness;
 }
 
-vec3 getDirectIllumination(const Vertex vertex, const vec3 albedo) {
+vec3 getDirectIllumination(
+    const Vertex vertex,
+    const vec3 albedo,
+    const float roughness,
+    const float metallic) {
     vec3 color = albedo * AmbientTerm;
     for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
         Light light = lights.values[lightIndex];
         vec3 lightDir;
-        float lightIntensity;
+        float lightIntensity = light.intensity;
+        float lightDistance = TMax;
         switch (light.type) {
             case LightTypeDirectional: {
                 lightDir = -light.directionOrPosition;
-                lightIntensity = light.intensity;
             } break;
             case LightTypePoint: {
-                const vec3 lightPos = light.directionOrPosition;
-                lightDir = lightPos - vertex.position;
-                const float lightDistance = length(lightDir);
-                lightIntensity = light.intensity / (lightDistance * lightDistance);
+                lightDir = light.directionOrPosition - vertex.position;
+                lightDistance = length(lightDir);
+                lightIntensity = lightIntensity / (lightDistance * lightDistance);
                 lightDir = lightDir / lightDistance;
             } break;
         }
@@ -125,9 +134,9 @@ vec3 getDirectIllumination(const Vertex vertex, const vec3 albedo) {
                 shadowRayOrigin,
                 TMin,
                 shadowRayDirection,
-                TMax,
+                lightDistance,
                 ShadowPayloadIndex);
-            color += color + albedo * (nDotL * lightIntensity * shadowAttenuation);
+            color += nDotL * albedo * lightIntensity * shadowAttenuation;
         }
     }
     return color;
@@ -138,23 +147,25 @@ void main() {
     Material material = unpackInstanceMaterial(gl_InstanceCustomIndexEXT);
 
     vec3 albedo = getAlbedo(material, vertex.texCoord);
-    float roughness = getRoughness(material, vertex.texCoord);
-
-    vec3 directIlluminationTerm = vec3(0.0);
-    if (material.indexOfRefraction <= 0.0) {
-        directIlluminationTerm = getDirectIllumination(vertex, albedo);
-    }
+    float roughness, metallic;
+    getRoughnessAndMetallic(material, vertex.texCoord, roughness, metallic);
 
     const vec3 rayOrigin = vertex.position;
     const vec3 rayDirection = normalize(gl_WorldRayDirectionEXT);
 
+    vec3 directIlluminationTerm = vec3(0.0);
+    if (material.indexOfRefraction <= 0.0) {
+        directIlluminationTerm = getDirectIllumination(vertex, albedo, roughness, metallic);
+    }
+
     rayPayload.color += directIlluminationTerm * rayPayload.weight;
     rayPayload.depth += 1;
-    rayPayload.weight *= material.metallic;
+    rayPayload.weight *= metallic;
 
-    if (material.metallic > MetallicCuttoff && rayPayload.depth < 10) {
+    if (metallic > MetallicCuttoff && rayPayload.depth < 10) {
         const vec3 reflectionOrigin = rayOrigin;
-        const vec3 reflectionDirection = reflect(rayDirection, vertex.normal);
+        const vec3 reflectionDirection =
+            reflect(rayDirection, vertex.normal) + vertex.normal * Bias;
         traceRayEXT(
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
@@ -182,7 +193,7 @@ void main() {
             refractionRatio = material.indexOfRefraction;
             refractionNormal = -vertex.normal;
         }
-        vec3 refractionOrigin = rayOrigin - refractionNormal * Bias;
+        vec3 refractionOrigin = rayOrigin;
         vec3 refractedDirection = refract(rayDirection, refractionNormal, refractionRatio);
         traceRayEXT(
             topLevelAS,

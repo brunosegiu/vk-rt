@@ -52,6 +52,7 @@ private:
     KeyStates mKeyStates;
     glm::vec2 mCurrentMousePos;
     bool mActive;
+    bool mSpeedModifierActive;
 };
 
 }  // namespace VKRT

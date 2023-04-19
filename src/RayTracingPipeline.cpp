@@ -53,8 +53,7 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setBinding(5)
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setDescriptorCount(1)
-            .setStageFlags(
-                vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR);
+            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
 
     vk::DescriptorSetLayoutBinding samplerBinding =
         vk::DescriptorSetLayoutBinding()
