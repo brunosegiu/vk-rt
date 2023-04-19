@@ -41,17 +41,14 @@ void Object::SetScale(const glm::vec3& scale) {
 }
 
 void Object::UpdateTransform() {
-    glm::mat4 rotationTransform = glm::mat4(1.0f);
-    rotationTransform =
-        glm::rotate(rotationTransform, glm::radians(mEulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-    rotationTransform =
-        glm::rotate(rotationTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-    rotationTransform =
-        glm::rotate(rotationTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-    glm::mat4 scaleTransform = glm::scale(glm::mat4(1.0f), mScale);
-    glm::mat4 translationTransform = glm::translate(glm::mat4(1.0f), mPosition);
-
-    mTransform = translationTransform * scaleTransform * rotationTransform;
+    mTransform = glm::translate(glm::mat4(1.0f), mPosition);
+    mTransform =
+        glm::rotate(mTransform, glm::radians(mEulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    mTransform =
+        glm::rotate(mTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    mTransform =
+        glm::rotate(mTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    mTransform = glm::scale(mTransform, mScale);
 }
 
 Object::~Object() {

@@ -1,10 +1,11 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : enable
 
-const uint ShadowIndex = 1;
+#include "definitions.glsl"
 
-layout(location = ShadowIndex) rayPayloadInEXT bool isShadowed;
+layout(location = ShadowPayloadIndex) rayPayloadInEXT float shadowAttenuation;
 
 void main() {
-  isShadowed = false;
+    shadowAttenuation = 1.0f;
 }

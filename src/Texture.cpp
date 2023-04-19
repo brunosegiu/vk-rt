@@ -12,7 +12,12 @@ Texture::Texture(
     vk::Format format,
     const uint8_t* buffer,
     size_t bufferSize)
-    : mContext(context) {
+    : Texture(
+          context,
+          width,
+          height,
+          format,
+          vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled) {
     VulkanBuffer* stagingBuffer = VulkanBuffer::Create(
         mContext,
         bufferSize,
@@ -22,41 +27,6 @@ Texture::Texture(
     std::copy_n(buffer, bufferSize, stagingData);
     stagingBuffer->UnmapBuffer();
 
-    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-
-    vk::ImageCreateInfo imageCreateInfo =
-        vk::ImageCreateInfo()
-            .setImageType(vk::ImageType::e2D)
-            .setFormat(format)
-            .setExtent(vk::Extent3D{width, height, 1})
-            .setMipLevels(1)
-            .setArrayLayers(1)
-            .setSamples(vk::SampleCountFlagBits::e1)
-            .setTiling(vk::ImageTiling::eOptimal)
-            .setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled)
-            .setInitialLayout(vk::ImageLayout::eUndefined);
-
-    mImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
-
-    vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mImage);
-    mMemory = mContext->GetDevice()->AllocateMemory(
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        imageMemReq);
-    VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mImage, mMemory, 0));
-
-    vk::ImageViewCreateInfo imageViewCreateInfo =
-        vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
-            .setSubresourceRange(vk::ImageSubresourceRange()
-                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                     .setBaseMipLevel(0)
-                                     .setLevelCount(1)
-                                     .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
-            .setImage(mImage);
-    mImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
-
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
     VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
 
@@ -65,10 +35,8 @@ Texture::Texture(
 
     SetImageLayout(
         commandBuffer,
-        mImage,
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eTransferDstOptimal,
-        subresourceRange,
         vk::PipelineStageFlagBits::eAllCommands,
         vk::PipelineStageFlagBits::eAllCommands);
 
@@ -87,10 +55,8 @@ Texture::Texture(
 
     SetImageLayout(
         commandBuffer,
-        mImage,
         vk::ImageLayout::eTransferDstOptimal,
         vk::ImageLayout::eShaderReadOnlyOptimal,
-        subresourceRange,
         vk::PipelineStageFlagBits::eAllCommands,
         vk::PipelineStageFlagBits::eAllCommands);
 
@@ -101,18 +67,66 @@ Texture::Texture(
     stagingBuffer->Release();
 }
 
+Texture::Texture(
+    Context* context,
+    uint32_t width,
+    uint32_t height,
+    vk::Format format,
+    vk::ImageUsageFlags usageFlags,
+    vk::Image image)
+    : mContext(context), mImage(image), ownsImage(true) {
+    ownsImage = !image;
+
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+
+    if (ownsImage) {
+        vk::ImageCreateInfo imageCreateInfo = vk::ImageCreateInfo()
+                                                  .setImageType(vk::ImageType::e2D)
+                                                  .setFormat(format)
+                                                  .setExtent(vk::Extent3D{width, height, 1})
+                                                  .setMipLevels(1)
+                                                  .setArrayLayers(1)
+                                                  .setSamples(vk::SampleCountFlagBits::e1)
+                                                  .setTiling(vk::ImageTiling::eOptimal)
+                                                  .setUsage(usageFlags)
+                                                  .setInitialLayout(vk::ImageLayout::eUndefined);
+
+        mImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
+
+        vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mImage);
+        mMemory = mContext->GetDevice()->AllocateMemory(
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            imageMemReq);
+        VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mImage, mMemory, 0));
+    }
+
+    vk::ImageViewCreateInfo imageViewCreateInfo =
+        vk::ImageViewCreateInfo()
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(format)
+            .setSubresourceRange(vk::ImageSubresourceRange()
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setBaseMipLevel(0)
+                                     .setLevelCount(1)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImage(mImage);
+
+    mImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
+}
+
 void Texture::SetImageLayout(
     vk::CommandBuffer& commandBuffer,
-    vk::Image& image,
     vk::ImageLayout oldLayout,
     vk::ImageLayout newLayout,
-    const vk::ImageSubresourceRange& subresourceRange,
     vk::PipelineStageFlags srcStageMask,
     vk::PipelineStageFlags dstStageMask) {
+    const vk::ImageSubresourceRange subresourceRange =
+        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
     vk::ImageMemoryBarrier imageBarrier = vk::ImageMemoryBarrier()
                                               .setOldLayout(oldLayout)
                                               .setNewLayout(newLayout)
-                                              .setImage(image)
+                                              .setImage(mImage)
                                               .setSubresourceRange(subresourceRange);
 
     switch (oldLayout) {
@@ -146,6 +160,17 @@ void Texture::SetImageLayout(
     }
 
     commandBuffer.pipelineBarrier(srcStageMask, dstStageMask, {}, {}, {}, imageBarrier);
+}
+
+Texture::~Texture() {
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+    logicalDevice.destroyImageView(mImageView);
+    if (ownsImage) {
+        logicalDevice.destroyImage(mImage);
+        logicalDevice.freeMemory(mMemory);
+    }
+
+    mContext->Release();
 }
 
 }  // namespace VKRT

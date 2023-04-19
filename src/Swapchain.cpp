@@ -5,6 +5,7 @@
 
 #include "Context.h"
 #include "DebugUtils.h"
+#include "Texture.h"
 
 namespace VKRT {
 
@@ -80,20 +81,13 @@ Swapchain::Swapchain(Context* context) : mContext(context), mCurrentImageIndex(0
 
     mFormat = surfaceFormat.format;
     mExtent = surfaceExtent;
-    mImages = VKRT_ASSERT_VK(logicalDevice.getSwapchainImagesKHR(mSwapchainHandle));
+    std::vector<vk::Image> images =
+        VKRT_ASSERT_VK(logicalDevice.getSwapchainImagesKHR(mSwapchainHandle));
 
-    for (vk::Image& image : mImages) {
-        vk::ImageViewCreateInfo imageViewCreateInfo =
-            vk::ImageViewCreateInfo()
-                .setImage(image)
-                .setViewType(vk::ImageViewType::e2D)
-                .setFormat(mFormat)
-                .setComponents(vk::ComponentMapping{})
-                .setSubresourceRange(
-                    vk::ImageSubresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1});
-        vk::ImageView imageView =
-            VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
-        mImageViews.emplace_back(imageView);
+    for (vk::Image& image : images) {
+        Texture* texture =
+            new Texture(mContext, surfaceExtent.width, surfaceExtent.height, mFormat, {}, image);
+        mImages.emplace_back(texture);
     }
 
     mPresentSemaphore = VKRT_ASSERT_VK(logicalDevice.createSemaphore(vk::SemaphoreCreateInfo{}));
@@ -121,8 +115,8 @@ Swapchain::~Swapchain() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroySemaphore(mRenderSemaphore);
     logicalDevice.destroySemaphore(mPresentSemaphore);
-    for (vk::ImageView& imageView : mImageViews) {
-        logicalDevice.destroyImageView(imageView);
+    for (Texture* texture : mImages) {
+        texture->Release();
     }
     logicalDevice.destroySwapchainKHR(mSwapchainHandle);
     mContext->Release();

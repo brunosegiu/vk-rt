@@ -185,7 +185,13 @@ Model* Model::Load(Context* context, const std::string& path) {
                             image.image.size());
                     }
 
-                    material = new Material(albedo, roughness, albedoTexture, roughnessTexture);
+                    material = new Material(
+                        albedo,
+                        roughness,
+                        0.0f,
+                        -1.0f,
+                        albedoTexture,
+                        roughnessTexture);
 
                     if (albedoTexture != nullptr) {
                         albedoTexture->Release();

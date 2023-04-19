@@ -45,14 +45,16 @@ RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
             .setBinding(4)
             .setDescriptorType(vk::DescriptorType::eUniformBuffer)
             .setDescriptorCount(1)
-            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+            .setStageFlags(
+                vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR);
 
     vk::DescriptorSetLayoutBinding lightUniformBufferBinding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(5)
             .setDescriptorType(vk::DescriptorType::eStorageBuffer)
             .setDescriptorCount(1)
-            .setStageFlags(vk::ShaderStageFlagBits::eClosestHitKHR);
+            .setStageFlags(
+                vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR);
 
     vk::DescriptorSetLayoutBinding samplerBinding =
         vk::DescriptorSetLayoutBinding()

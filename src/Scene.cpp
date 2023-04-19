@@ -35,15 +35,12 @@ std::vector<Mesh::Description> Scene::GetDescriptions() {
     return descriptions;
 }
 
-std::vector<Light::Description> Scene::GetLightDescriptions() {
-    std::vector<Light::Description> descriptions;
+std::vector<Light::Proxy> Scene::GetLightDescriptions() {
+    std::vector<Light::Proxy> proxies;
     for (Light* light : mLights) {
-        Light::Description description{
-            .position = light->GetPosition(),
-            .intensity = light->GetIntensity()};
-        descriptions.emplace_back(description);
+        proxies.push_back(light->GetProxy());
     }
-    return descriptions;
+    return proxies;
 }
 
 Scene::SceneMaterials Scene::GetMaterialProxies() {
@@ -95,6 +92,8 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
             MaterialProxy proxy{
                 .albedo = material->GetAlbedo(),
                 .roughness = material->GetRoughness(),
+                .metallic = material->GetMetallic(),
+                .indexOfRefraction = material->GetIndexOfRefraction(),
                 .albedoTextureIndex = -1,
                 .roughnessTextureIndex = -1,
             };

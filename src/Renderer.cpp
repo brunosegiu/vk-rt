@@ -18,59 +18,26 @@ Renderer::Renderer(Context* context, Scene* scene) : mContext(context), mScene(s
 void Renderer::CreateStorageImage() {
     Swapchain* swapchain = mContext->GetSwapchain();
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    vk::ImageCreateInfo imageCreateInfo =
-        vk::ImageCreateInfo()
-            .setImageType(vk::ImageType::e2D)
-            .setFormat(swapchain->GetFormat())
-            .setExtent(vk::Extent3D{swapchain->GetExtent(), 1})
-            .setMipLevels(1)
-            .setArrayLayers(1)
-            .setSamples(vk::SampleCountFlagBits::e1)
-            .setTiling(vk::ImageTiling::eOptimal)
-            .setUsage(vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage)
-            .setInitialLayout(vk::ImageLayout::eUndefined);
-    mStorageImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
 
-    vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mStorageImage);
-    mStorageImageMemory = mContext->GetDevice()->AllocateMemory(
-        vk::MemoryPropertyFlagBits::eDeviceLocal,
-        imageMemReq);
-    VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mStorageImage, mStorageImageMemory, 0));
+    const vk::Format swapchainFormat = swapchain->GetFormat();
+    const uint32_t swapchainWidth = swapchain->GetExtent().width;
+    const uint32_t swapchainHeight = swapchain->GetExtent().height;
 
-    vk::ImageViewCreateInfo storageImageViewCreateInfo =
-        vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(swapchain->GetFormat())
-            .setSubresourceRange(vk::ImageSubresourceRange()
-                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                     .setBaseMipLevel(0)
-                                     .setLevelCount(1)
-                                     .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
-            .setImage(mStorageImage);
-    mStorageImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(storageImageViewCreateInfo));
+    mStorageTexture = new Texture(
+        mContext,
+        swapchainWidth,
+        swapchainHeight,
+        swapchainFormat,
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage);
 
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
     VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
-    vk::ImageMemoryBarrier imageMemoryBarrier =
-        vk::ImageMemoryBarrier()
-            .setOldLayout(vk::ImageLayout::eUndefined)
-            .setNewLayout(vk::ImageLayout::eGeneral)
-            .setSubresourceRange(vk::ImageSubresourceRange()
-                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                     .setBaseMipLevel(0)
-                                     .setLevelCount(1)
-                                     .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
-            .setSrcAccessMask({})
-            .setImage(mStorageImage);
-    commandBuffer.pipelineBarrier(
+    mStorageTexture->SetImageLayout(
+        commandBuffer,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eGeneral,
         vk::PipelineStageFlagBits::eAllCommands,
-        vk::PipelineStageFlagBits::eAllCommands,
-        {},
-        nullptr,
-        nullptr,
-        imageMemoryBarrier);
+        vk::PipelineStageFlagBits::eAllCommands);
     VKRT_ASSERT_VK(commandBuffer.end());
     mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
@@ -100,7 +67,7 @@ void Renderer::CreateUniformBuffer() {
     }
 
     {
-        const std::vector<Light::Description> descriptions = mScene->GetLightDescriptions();
+        const std::vector<Light::Proxy> lightProxies = mScene->GetLightDescriptions();
         {
             mLightMetadataUniformBuffer = mContext->GetDevice()->CreateBuffer(
                 sizeof(uint32_t),
@@ -108,22 +75,22 @@ void Renderer::CreateUniformBuffer() {
                 vk::MemoryPropertyFlagBits::eHostVisible |
                     vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
-            const uint32_t lightCount = descriptions.size();
+            const uint32_t lightCount = lightProxies.size();
             std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
             mLightMetadataUniformBuffer->UnmapBuffer();
         }
 
         {
-            const size_t descriptionsBufferSize = sizeof(Light::Description) * descriptions.size();
+            const size_t lightProxiesBufferSize = sizeof(Light::Proxy) * lightProxies.size();
             mLightUniformBuffer = mContext->GetDevice()->CreateBuffer(
-                descriptionsBufferSize,
+                lightProxiesBufferSize,
                 vk::BufferUsageFlagBits::eStorageBuffer,
                 vk::MemoryPropertyFlagBits::eHostVisible |
                     vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* buffer = mLightUniformBuffer->MapBuffer();
             std::copy_n(
-                reinterpret_cast<const uint8_t*>(descriptions.data()),
-                descriptionsBufferSize,
+                reinterpret_cast<const uint8_t*>(lightProxies.data()),
+                lightProxiesBufferSize,
                 buffer);
             mLightUniformBuffer->UnmapBuffer();
         }
@@ -178,27 +145,27 @@ void Renderer::UpdateCameraUniforms(Camera* camera) {
 }
 
 void Renderer::UpdateLightUniforms() {
-    const std::vector<Light::Description> descriptions = mScene->GetLightDescriptions();
+    const std::vector<Light::Proxy> lightProxies = mScene->GetLightDescriptions();
     {
         uint8_t* buffer = mLightMetadataUniformBuffer->MapBuffer();
-        const uint32_t lightCount = descriptions.size();
+        const uint32_t lightCount = lightProxies.size();
         std::copy_n(reinterpret_cast<const uint8_t*>(&lightCount), sizeof(uint32_t), buffer);
         mLightMetadataUniformBuffer->UnmapBuffer();
     }
 
     {
-        const size_t descriptionsBufferSize = sizeof(Light::Description) * descriptions.size();
-        if (descriptionsBufferSize != mLightUniformBuffer->GetBufferSize()) {
+        const size_t lightProxiesBufferSize = sizeof(Light::Proxy) * lightProxies.size();
+        if (lightProxiesBufferSize != mLightUniformBuffer->GetBufferSize()) {
             mLightUniformBuffer->Release();
             mLightUniformBuffer = mContext->GetDevice()->CreateBuffer(
-                descriptionsBufferSize,
+                lightProxiesBufferSize,
                 vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::MemoryPropertyFlagBits::eHostVisible |
                     vk::MemoryPropertyFlagBits::eHostCoherent);
             uint8_t* buffer = mLightUniformBuffer->MapBuffer();
             std::copy_n(
-                reinterpret_cast<const uint8_t*>(descriptions.data()),
-                descriptionsBufferSize,
+                reinterpret_cast<const uint8_t*>(lightProxies.data()),
+                lightProxiesBufferSize,
                 buffer);
             mLightUniformBuffer->UnmapBuffer();
             vk::WriteDescriptorSet lightUniformBufferWrite =
@@ -213,8 +180,8 @@ void Renderer::UpdateLightUniforms() {
         }
         uint8_t* buffer = mLightUniformBuffer->MapBuffer();
         std::copy_n(
-            reinterpret_cast<const uint8_t*>(descriptions.data()),
-            descriptionsBufferSize,
+            reinterpret_cast<const uint8_t*>(lightProxies.data()),
+            lightProxiesBufferSize,
             buffer);
         mLightUniformBuffer->UnmapBuffer();
     }
@@ -254,7 +221,7 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
             .setPNext(&descriptorAccelerationStructureInfo);
 
     vk::DescriptorImageInfo storageImageInfo = vk::DescriptorImageInfo()
-                                                   .setImageView(mStorageImageView)
+                                                   .setImageView(mStorageTexture->GetImageView())
                                                    .setImageLayout(vk::ImageLayout::eGeneral);
     vk::WriteDescriptorSet imageWrite = vk::WriteDescriptorSet()
                                             .setDstSet(mDescriptorSet)
@@ -375,25 +342,21 @@ void Renderer::Render(Camera* camera) {
             1,
             mContext->GetDevice()->GetDispatcher());
 
-        vk::Image& currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
+        Texture* currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
         const vk::ImageSubresourceRange subresourceRange =
             vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
-        Texture::SetImageLayout(
+        currentSwapchainImage->SetImageLayout(
             commandBuffer,
-            currentSwapchainImage,
             vk::ImageLayout::eUndefined,
             vk::ImageLayout::eTransferDstOptimal,
-            subresourceRange,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        Texture::SetImageLayout(
+        mStorageTexture->SetImageLayout(
             commandBuffer,
-            mStorageImage,
             vk::ImageLayout::eGeneral,
             vk::ImageLayout::eTransferSrcOptimal,
-            subresourceRange,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
@@ -407,27 +370,23 @@ void Renderer::Render(Camera* camera) {
                 .setDstOffset(vk::Offset3D(0, 0, 0))
                 .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
         commandBuffer.copyImage(
-            mStorageImage,
+            mStorageTexture->GetImage(),
             vk::ImageLayout::eTransferSrcOptimal,
-            currentSwapchainImage,
+            currentSwapchainImage->GetImage(),
             vk::ImageLayout::eTransferDstOptimal,
             imageCopyRegion);
 
-        Texture::SetImageLayout(
+        currentSwapchainImage->SetImageLayout(
             commandBuffer,
-            currentSwapchainImage,
             vk::ImageLayout::eTransferDstOptimal,
             vk::ImageLayout::ePresentSrcKHR,
-            subresourceRange,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
-        Texture::SetImageLayout(
+        mStorageTexture->SetImageLayout(
             commandBuffer,
-            mStorageImage,
             vk::ImageLayout::eTransferSrcOptimal,
             vk::ImageLayout::eGeneral,
-            subresourceRange,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::PipelineStageFlagBits::eAllCommands);
 
@@ -469,9 +428,7 @@ Renderer::~Renderer() {
     mCameraUniformBuffer->Release();
     mSceneUniformBuffer->Release();
 
-    logicalDevice.destroyImageView(mStorageImageView);
-    logicalDevice.destroyImage(mStorageImage);
-    logicalDevice.freeMemory(mStorageImageMemory);
+    mStorageTexture->Release();
 
     mPipeline->Release();
     mScene->Release();

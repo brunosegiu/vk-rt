@@ -30,9 +30,7 @@ private:
     Context* mContext;
     Scene* mScene;
 
-    vk::Image mStorageImage;
-    vk::DeviceMemory mStorageImageMemory;
-    vk::ImageView mStorageImageView;
+    Texture* mStorageTexture;
 
     VulkanBuffer* mCameraUniformBuffer;
     VulkanBuffer* mSceneUniformBuffer;

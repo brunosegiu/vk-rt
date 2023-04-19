@@ -34,51 +34,42 @@ int main() {
             std::string userDir = std::getenv("HOME");
 #endif
             Model* helmet = Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
-            /* Model* sponza =
-                Model::Load(context, userDir + "/assets/sponza_b.gltf");*/
-            Model* plane = Model::Load(context, userDir + "/assets/plane.gltf");
+            Model* sponza = Model::Load(context, userDir + "/assets/sponza_b.gltf");
+            Model* sphere = Model::Load(context, userDir + "/assets/sphere.gltf");
             Model* venus = Model::Load(context, userDir + "/assets/venus.gltf");
-            std::for_each(venus->GetMeshes().begin(), venus->GetMeshes().end(), [](Mesh* mesh) {
-                mesh->GetMaterial()->SetRoughness(1.0f);
+            std::for_each(sphere->GetMeshes().begin(), sphere->GetMeshes().end(), [](Mesh* mesh) {
+                mesh->GetMaterial()->SetMetallic(1.0f);
             });
-            std::for_each(plane->GetMeshes().begin(), plane->GetMeshes().end(), [](Mesh* mesh) {
-                mesh->GetMaterial()->SetRoughness(0.8f);
+            std::for_each(venus->GetMeshes().begin(), venus->GetMeshes().end(), [](Mesh* mesh) {
+                mesh->GetMaterial()->SetIndexOfRefraction(1.5f);
             });
             Camera* camera = new Camera(window);
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
-            Light* light = new Light();
-            light->SetPosition(glm::vec3(-4.0f, 3.0f, 0.0f));
-            light->SetIntensity(3.0f);
-
-            Light* light1 = new Light();
-            light1->SetPosition(glm::vec3(0.0f, 2.0f, 0.0f));
-            light1->SetIntensity(3.0f);
-
-            Light* light2 = new Light();
-            light2->SetPosition(glm::vec3(0.0f, 1.0f, -3.0f));
-            light2->SetIntensity(10.0f);
+            DirectionalLight* light = new DirectionalLight();
+            light->SetIntensity(1.0f);
 
             Object* object1 = new Object(helmet);
             object1->SetTranslation(glm::vec3(-3.0f, 3.0f, 0.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object1->SetScale(glm::vec3(1.5f));
             Object* object2 = new Object(venus);
-            object2->SetTranslation(glm::vec3(3.0f, 3.0f, 0.0f));
+            object2->SetTranslation(glm::vec3(3.0f, 3.0f, -5.0f));
             object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            object2->SetScale(glm::vec3(.2f));
-            Object* object3 = new Object(plane);
-            object3->SetTranslation(glm::vec3(0.0f, -1.0f, 0.0f));
-            object3->Rotate(glm::vec3(0.0f, 0.0f, 0.0f));
-            object3->SetScale(glm::vec3(10.0f));
+            object2->SetScale(glm::vec3(.5f));
+            Object* object3 = new Object(sphere);
+            object3->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
+            object3->SetScale(glm::vec3(1.0f));
+            Object* object4 = new Object(sponza);
+            object4->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            object4->SetScale(glm::vec3(0.03f));
 
             scene->AddObject(object1);
             scene->AddObject(object2);
             scene->AddObject(object3);
+            scene->AddObject(object4);
 
-            // scene->AddLight(light);
-            scene->AddLight(light1);
-            scene->AddLight(light2);
+            scene->AddLight(light);
 
             scene->Commit();
 
@@ -87,11 +78,9 @@ int main() {
             double elapsedSeconds = 0.0;
             double totalSeconds = 0.0;
             while (window->Update()) {
+                light->SetDirection(glm::normalize(
+                    glm::vec3(0.4f * cos(totalSeconds), -1.0f, 0.3f * sin(totalSeconds))));
                 timer.Start();
-                /* light2->SetPosition(glm::vec3(
-                    3.0f + 2.0f * cos(totalSeconds),
-                    3.0f + 2.0f * cos(totalSeconds),
-                    0.0f));*/
                 camera->Update(elapsedSeconds);
                 render->Render(camera);
                 elapsedSeconds = timer.ElapsedSeconds();
@@ -101,15 +90,13 @@ int main() {
             object2->Release();
             object3->Release();
             light->Release();
-            light1->Release();
-            light2->Release();
-            // sponza->Release();
 
             render->Release();
             camera->Release();
-            plane->Release();
+            sphere->Release();
             helmet->Release();
             scene->Release();
+            sponza->Release();
             context->Release();
         }
     }

@@ -9,6 +9,7 @@
 namespace VKRT {
 
 class Context;
+class Texture;
 
 class Swapchain : public RefCountPtr {
 public:
@@ -17,7 +18,7 @@ public:
     vk::Format GetFormat() { return mFormat; }
     vk::Extent2D GetExtent() { return mExtent; }
 
-    vk::Image& GetCurrentImage() { return mImages[mCurrentImageIndex]; }
+    Texture* GetCurrentImage() { return mImages[mCurrentImageIndex]; }
 
     void AcquireNextImage();
     void Present();
@@ -32,8 +33,7 @@ private:
     vk::SwapchainKHR mSwapchainHandle;
     vk::Format mFormat;
     vk::Extent2D mExtent;
-    std::vector<vk::Image> mImages;
-    std::vector<vk::ImageView> mImageViews;
+    std::vector<Texture*> mImages;
     vk::Semaphore mPresentSemaphore;
     vk::Semaphore mRenderSemaphore;
     uint32_t mCurrentImageIndex;

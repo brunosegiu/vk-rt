@@ -22,11 +22,13 @@ public:
     const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
     std::vector<Mesh::Description> GetDescriptions();
-    std::vector<Light::Description> GetLightDescriptions();
+    std::vector<Light::Proxy> GetLightDescriptions();
 
     struct MaterialProxy {
         glm::vec3 albedo;
         float roughness;
+        float metallic;
+        float indexOfRefraction;
         int32_t albedoTextureIndex;
         int32_t roughnessTextureIndex;
     };
