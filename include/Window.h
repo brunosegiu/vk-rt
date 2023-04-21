@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "InputManager.h"
 #include "RefCountPtr.h"
 #include "Result.h"
 
@@ -14,7 +15,7 @@ class InputManager;
 
 class Window : public RefCountPtr {
 public:
-    static ResultValue<Window*> Create();
+    static ResultValue<ScopedRefPtr<Window>> Create();
 
     Window();
 
@@ -22,7 +23,7 @@ public:
     std::vector<std::string> GetRequiredVulkanExtensions();
 
     GLFWwindow* GetNativeHandle() { return mNativeHandle; }
-    InputManager* GetInputManager() { return mInputManager; }
+    ScopedRefPtr<InputManager> GetInputManager() { return mInputManager; }
 
     struct Size2D {
         uint32_t width;
@@ -30,13 +31,14 @@ public:
     };
     Size2D GetSize();
 
-    ResultValue<Context*> CreateContext();
+    ResultValue<ScopedRefPtr<Context>> CreateContext();
+    void DestroyContext();
 
     ~Window();
 
 private:
     GLFWwindow* mNativeHandle;
-    Context* mContext;
-    InputManager* mInputManager;
+    ScopedRefPtr<Context> mContext;
+    ScopedRefPtr<InputManager> mInputManager;
 };
 }  // namespace VKRT

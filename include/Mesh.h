@@ -18,10 +18,10 @@ public:
         glm::vec2 texCoord;
     };
     Mesh(
-        Context* context,
+        ScopedRefPtr<Context> context,
         const std::vector<Vertex>& vertices,
         const std::vector<glm::uvec3>& indices,
-        Material* material);
+        ScopedRefPtr<Material> material);
 
     struct Description {
         vk::DeviceAddress vertexBufferAddress;
@@ -30,23 +30,23 @@ public:
     Description GetDescription() const;
 
     vk::DeviceAddress GetBLASAddress() const { return mBLASAddress; }
-    const Material* GetMaterial() const { return mMaterial; }
-    Material* GetMaterial() { return mMaterial; }
+    const ScopedRefPtr<Material> GetMaterial() const { return mMaterial; }
+    ScopedRefPtr<Material> GetMaterial() { return mMaterial; }
 
     ~Mesh();
 
 private:
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
 
-    VulkanBuffer* mVertexBuffer;
-    VulkanBuffer* mIndexBuffer;
-    VulkanBuffer* mTransformBuffer;
+    ScopedRefPtr<VulkanBuffer> mVertexBuffer;
+    ScopedRefPtr<VulkanBuffer> mIndexBuffer;
+    ScopedRefPtr<VulkanBuffer> mTransformBuffer;
 
-    VulkanBuffer* mBLASBuffer;
+    ScopedRefPtr<VulkanBuffer> mBLASBuffer;
     vk::AccelerationStructureKHR mBLAS;
     vk::DeviceAddress mBLASAddress;
 
-    Material* mMaterial;
+    ScopedRefPtr<Material> mMaterial;
 };
 
 }  // namespace VKRT

@@ -4,23 +4,21 @@
 
 namespace VKRT {
 
-Scene::Scene(Context* context)
+Scene::Scene(ScopedRefPtr<Context> context)
     : mContext(context),
       mObjects(),
       mInstanceBuffer(nullptr),
       mTLASBuffer(nullptr),
-      mCommitted(false) {
-    context->AddRef();
-}
+      mCommitted(false) {}
 
-void Scene::AddObject(Object* object) {
+void Scene::AddObject(ScopedRefPtr<Object> object) {
     VKRT_ASSERT(!mCommitted);
     if (object != nullptr) {
         mObjects.emplace_back(object);
     }
 }
 
-void Scene::AddLight(Light* light) {
+void Scene::AddLight(ScopedRefPtr<Light> light) {
     if (light != nullptr) {
         mLights.emplace_back(light);
     }
@@ -28,7 +26,7 @@ void Scene::AddLight(Light* light) {
 
 std::vector<Mesh::Description> Scene::GetDescriptions() {
     std::vector<Mesh::Description> descriptions;
-    for (const Object* object : mObjects) {
+    for (const ScopedRefPtr<Object>& object : mObjects) {
         std::vector<Mesh::Description> modelDescriptions = object->GetModel()->GetDescriptions();
         descriptions.insert(descriptions.end(), modelDescriptions.begin(), modelDescriptions.end());
     }
@@ -37,7 +35,7 @@ std::vector<Mesh::Description> Scene::GetDescriptions() {
 
 std::vector<Light::Proxy> Scene::GetLightDescriptions() {
     std::vector<Light::Proxy> proxies;
-    for (Light* light : mLights) {
+    for (const ScopedRefPtr<Light>& light : mLights) {
         proxies.push_back(light->GetProxy());
     }
     return proxies;
@@ -45,15 +43,15 @@ std::vector<Light::Proxy> Scene::GetLightDescriptions() {
 
 Scene::SceneMaterials Scene::GetMaterialProxies() {
     // Gather textures first
-    std::vector<std::pair<const Texture*, int32_t>> textureIndices;
+    std::vector<std::pair<ScopedRefPtr<Texture>, int32_t>> textureIndices;
     int32_t currentTextureIndex = 0;
-    for (const Object* object : mObjects) {
-        for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
+    for (const ScopedRefPtr<Object>& object : mObjects) {
+        for (const ScopedRefPtr<Mesh>& mesh : object->GetModel()->GetMeshes()) {
             const Material* material = mesh->GetMaterial();
-            std::vector<const Texture*> meshTextures{
+            std::vector<ScopedRefPtr<Texture>> meshTextures{
                 material->GetAlbedoTexture(),
                 material->GetRoughnessTexture()};
-            for (const Texture* texture : meshTextures) {
+            for (const ScopedRefPtr<Texture>& texture : meshTextures) {
                 if (texture != nullptr) {
                     auto it = std::find_if(
                         textureIndices.begin(),
@@ -71,9 +69,9 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
 
     // Gather materials and generate texture indices if applicable
     std::vector<MaterialProxy> materials;
-    for (const Object* object : mObjects) {
-        for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
-            const Material* material = mesh->GetMaterial();
+    for (const ScopedRefPtr<Object>& object : mObjects) {
+        for (const ScopedRefPtr<Mesh>& mesh : object->GetModel()->GetMeshes()) {
+            const ScopedRefPtr<Material> material = mesh->GetMaterial();
             MaterialProxy proxy{
                 .albedo = material->GetAlbedo(),
                 .roughness = material->GetRoughness(),
@@ -83,7 +81,7 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
                 .roughnessTextureIndex = -1,
             };
             {
-                const Texture* albedoTexture = material->GetAlbedoTexture();
+                const ScopedRefPtr<Texture> albedoTexture = material->GetAlbedoTexture();
                 auto albedoIt = std::find_if(
                     textureIndices.begin(),
                     textureIndices.end(),
@@ -93,7 +91,7 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
                 }
             }
             {
-                const Texture* roughnessTexture = material->GetRoughnessTexture();
+                const ScopedRefPtr<Texture> roughnessTexture = material->GetRoughnessTexture();
                 auto roughnessIt = std::find_if(
                     textureIndices.begin(),
                     textureIndices.end(),
@@ -108,7 +106,7 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
         }
     }
 
-    std::vector<const Texture*> textures;
+    std::vector<ScopedRefPtr<Texture>> textures;
     for (const auto& entry : textureIndices) {
         textures.push_back(entry.first);
     }
@@ -197,7 +195,7 @@ void Scene::Commit() {
             nullptr,
             mContext->GetDevice()->GetDispatcher()));
 
-        VulkanBuffer* scratchBuffer = mContext->GetDevice()->CreateBuffer(
+        ScopedRefPtr<VulkanBuffer> scratchBuffer = mContext->GetDevice()->CreateBuffer(
             buildSizesInfo.buildScratchSize,
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -233,8 +231,6 @@ void Scene::Commit() {
         mTLASAddress = logicalDevice.getAccelerationStructureAddressKHR(
             accelerationDeviceAddressInfo,
             mContext->GetDevice()->GetDispatcher());
-
-        scratchBuffer->Release();
     }
 }
 
@@ -245,13 +241,7 @@ Scene::~Scene() {
             mTLAS,
             nullptr,
             mContext->GetDevice()->GetDispatcher());
-        mTLASBuffer->Release();
-        mInstanceBuffer->Release();
     }
-    for (Object* object : mObjects) {
-        object->Release();
-    }
-    mContext->Release();
 }
 
 }  // namespace VKRT

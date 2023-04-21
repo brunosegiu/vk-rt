@@ -9,7 +9,7 @@
 namespace VKRT {
 class Renderer : public RefCountPtr {
 public:
-    Renderer(Context* context, Scene* scene);
+    Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene);
 
     void Render(Camera* camera);
 
@@ -27,18 +27,18 @@ private:
     void UpdateCameraUniforms(Camera* camera);
     void UpdateLightUniforms();
 
-    Context* mContext;
-    Scene* mScene;
+    ScopedRefPtr<Context> mContext;
+    ScopedRefPtr<Scene> mScene;
 
-    Texture* mStorageTexture;
+    ScopedRefPtr<Texture> mStorageTexture;
 
-    VulkanBuffer* mCameraUniformBuffer;
-    VulkanBuffer* mSceneUniformBuffer;
-    VulkanBuffer* mLightMetadataUniformBuffer;
-    VulkanBuffer* mLightUniformBuffer;
-    VulkanBuffer* mMaterialsBuffer;
+    ScopedRefPtr<VulkanBuffer> mCameraUniformBuffer;
+    ScopedRefPtr<VulkanBuffer> mSceneUniformBuffer;
+    ScopedRefPtr<VulkanBuffer> mLightMetadataUniformBuffer;
+    ScopedRefPtr<VulkanBuffer> mLightUniformBuffer;
+    ScopedRefPtr<VulkanBuffer> mMaterialsBuffer;
 
-    RayTracingPipeline* mPipeline;
+    ScopedRefPtr<RayTracingPipeline> mPipeline;
     vk::DescriptorPool mDescriptorPool;
     vk::DescriptorSet mDescriptorSet;
 

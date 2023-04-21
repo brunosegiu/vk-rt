@@ -2,11 +2,12 @@
 
 #include "InputManager.h"
 #include "RefCountPtr.h"
+#include "Window.h"
 
 namespace VKRT {
 class Camera : public RefCountPtr, public InputEventListener {
 public:
-    Camera(Window* window);
+    Camera(ScopedRefPtr<Window> window);
 
     void Update(float deltaTime);
 
@@ -33,7 +34,7 @@ private:
 
     void UpdateViewTransform();
 
-    Window* mWindow;
+    ScopedRefPtr<Window> mWindow;
 
     float mMovementSpeed, mRotationSpeed;
 

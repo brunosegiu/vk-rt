@@ -9,7 +9,7 @@
 
 namespace VKRT {
 
-Model* Model::Load(Context* context, const std::string& path) {
+Model* Model::Load(ScopedRefPtr<Context> context, const std::string& path) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err;
@@ -21,7 +21,7 @@ Model* Model::Load(Context* context, const std::string& path) {
         isProperlyLoaded = loader.LoadBinaryFromFile(&model, &err, &warn, path);
     }
     constexpr int32_t invalidIndex = -1;
-    std::vector<Mesh*> meshes;
+    std::vector<ScopedRefPtr<Mesh>> meshes;
     if (isProperlyLoaded) {
         if (!model.nodes.empty()) {
             int32_t meshIndex = -1;
@@ -145,7 +145,7 @@ Model* Model::Load(Context* context, const std::string& path) {
                 }
 
                 const int32_t materialIndex = primitive.material;
-                Material* material = nullptr;
+                ScopedRefPtr<Material> material = nullptr;
                 if (materialIndex >= 0) {
                     const tinygltf::Material& gltfMaterial = model.materials[materialIndex];
 
@@ -156,7 +156,7 @@ Model* Model::Load(Context* context, const std::string& path) {
 
                     const int32_t albedoTextureIndex =
                         gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-                    Texture* albedoTexture = nullptr;
+                    ScopedRefPtr<Texture> albedoTexture = nullptr;
                     if (albedoTextureIndex >= 0) {
                         const tinygltf::Texture& texture = model.textures[albedoTextureIndex];
                         const tinygltf::Image& image = model.images[texture.source];
@@ -172,7 +172,7 @@ Model* Model::Load(Context* context, const std::string& path) {
                     const int32_t roughnessTextureIndex =
                         gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
                     gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
-                    Texture* roughnessTexture = nullptr;
+                    ScopedRefPtr<Texture> roughnessTexture = nullptr;
                     if (roughnessTextureIndex >= 0) {
                         const tinygltf::Texture& texture = model.textures[roughnessTextureIndex];
                         const tinygltf::Image& image = model.images[texture.source];
@@ -192,20 +192,11 @@ Model* Model::Load(Context* context, const std::string& path) {
                         -1.0f,
                         albedoTexture,
                         roughnessTexture);
-
-                    if (albedoTexture != nullptr) {
-                        albedoTexture->Release();
-                    }
-
-                    if (roughnessTexture != nullptr) {
-                        roughnessTexture->Release();
-                    }
                 } else {
                     material = new Material();
                 }
 
-                Mesh* mesh = new Mesh(context, vertices, indices, material);
-                material->Release();
+                ScopedRefPtr<Mesh> mesh = new Mesh(context, vertices, indices, material);
                 meshes.push_back(mesh);
             }
         }
@@ -215,24 +206,17 @@ Model* Model::Load(Context* context, const std::string& path) {
     return nullptr;
 }
 
-Model::Model(Context* context, const std::vector<Mesh*>& meshes)
-    : mContext(context), mMeshes(meshes) {
-    mContext->AddRef();
-}
+Model::Model(ScopedRefPtr<Context> context, const std::vector<ScopedRefPtr<Mesh>>& meshes)
+    : mContext(context), mMeshes(meshes) {}
 
 std::vector<Mesh::Description> Model::GetDescriptions() const {
     std::vector<Mesh::Description> descriptions;
-    for (const Mesh* mesh : mMeshes) {
+    for (const ScopedRefPtr<Mesh>& mesh : mMeshes) {
         descriptions.push_back(mesh->GetDescription());
     }
     return descriptions;
 }
 
-Model::~Model() {
-    for (Mesh* mesh : mMeshes) {
-        mesh->Release();
-    }
-    mContext->Release();
-}
+Model::~Model() {}
 
 }  // namespace VKRT

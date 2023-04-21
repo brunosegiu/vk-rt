@@ -8,13 +8,13 @@
 namespace VKRT {
 class Instance : public RefCountPtr {
 public:
-    static ResultValue<Instance*> Create(Window* window);
+    static ResultValue<ScopedRefPtr<Instance>> Create(ScopedRefPtr<Window> window);
 
     Instance(const vk::Instance& instance);
 
     ResultValue<vk::PhysicalDevice> FindSuitablePhysicalDevice(const vk::SurfaceKHR& surface);
 
-    vk::SurfaceKHR CreateSurface(Window* window);
+    vk::SurfaceKHR CreateSurface(ScopedRefPtr<Window> window);
     void DestroySurface(vk::SurfaceKHR surface);
 
     vk::Instance& GetHandle() { return mInstanceHandle; }

@@ -2,10 +2,15 @@
 
 #include <GLFW/glfw3.h>
 
+#include "DebugUtils.h"
+
 namespace VKRT {
 
-Context::Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Device* device) {
-    window->AddRef();
+Context::Context(
+    ScopedRefPtr<Window> window,
+    ScopedRefPtr<Instance> instance,
+    vk::SurfaceKHR surface,
+    ScopedRefPtr<Device> device) {
     mWindow = window;
     mInstance = instance;
     mSurface = surface;
@@ -14,11 +19,15 @@ Context::Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Dev
     mSwapchain = new Swapchain(this);
 }
 
-Context::~Context() {
-    mDevice->Release();
+void Context::Destroy() {
+    VKRT_ASSERT_VK(mDevice->GetLogicalDevice().waitIdle());
+    mSwapchain = nullptr;
     mInstance->DestroySurface(mSurface);
-    mInstance->Release();
-    mWindow->Release();
+    mDevice = nullptr;
+    mInstance = nullptr;
+    mWindow = nullptr;
 }
+
+Context::~Context() {}
 
 }  // namespace VKRT

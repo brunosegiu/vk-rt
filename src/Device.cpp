@@ -11,7 +11,9 @@
 
 namespace VKRT {
 
-ResultValue<Device*> Device::Create(Instance* instance, const vk::SurfaceKHR& surface) {
+ResultValue<ScopedRefPtr<Device>> Device::Create(
+    ScopedRefPtr<Instance> instance,
+    const vk::SurfaceKHR& surface) {
     auto [result, physicalDevice] = instance->FindSuitablePhysicalDevice(surface);
     if (result == Result::Success) {
         return {Result::Success, new Device(instance, physicalDevice, surface)};
@@ -19,7 +21,10 @@ ResultValue<Device*> Device::Create(Instance* instance, const vk::SurfaceKHR& su
     return {Result::InvalidDeviceError, nullptr};
 }
 
-Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& surface)
+Device::Device(
+    ScopedRefPtr<Instance> instance,
+    vk::PhysicalDevice physicalDevice,
+    const vk::SurfaceKHR& surface)
     : mContext(nullptr), mPhysicalDevice(physicalDevice) {
     const std::vector<vk::QueueFamilyProperties> queueFamiliesProperties =
         mPhysicalDevice.getQueueFamilyProperties();
@@ -81,9 +86,8 @@ Device::Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::
         vkGetDeviceProcAddr);
 }
 
-void Device::SetContext(Context* context) {
+void Device::SetContext(ScopedRefPtr<Context> context) {
     mContext = context;
-    mContext->AddRef();
 }
 
 vk::DeviceMemory Device::AllocateMemory(
@@ -114,7 +118,7 @@ vk::DeviceMemory Device::AllocateMemory(
     return VKRT_ASSERT_VK(mLogicalDevice.allocateMemory(allocateInfo));
 }
 
-VulkanBuffer* Device::CreateBuffer(
+ScopedRefPtr<VulkanBuffer> Device::CreateBuffer(
     const vk::DeviceSize& size,
     const vk::BufferUsageFlags& usageFlags,
     const vk::MemoryPropertyFlags& memoryFlags,
@@ -182,12 +186,8 @@ vk::PhysicalDeviceRayTracingPipelinePropertiesKHR Device::GetRayTracingPropertie
 }
 
 Device::~Device() {
-    VKRT_ASSERT_VK(mLogicalDevice.waitIdle());
     mLogicalDevice.destroyCommandPool(mCommandPool);
     mLogicalDevice.destroy();
-    if (mContext != nullptr) {
-        mContext->Release();
-    }
 }
 
 }  // namespace VKRT

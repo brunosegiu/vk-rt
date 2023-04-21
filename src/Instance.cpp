@@ -32,7 +32,7 @@ const std::vector<const char*> Instance::sRequiredDeviceExtensions{
     VK_KHR_SPIRV_1_4_EXTENSION_NAME,
     VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
 
-ResultValue<Instance*> Instance::Create(Window* window) {
+ResultValue<ScopedRefPtr<Instance>> Instance::Create(ScopedRefPtr<Window> window) {
     const vk::ApplicationInfo appInfo = vk::ApplicationInfo()
                                             .setPApplicationName("VKRT")
                                             .setApplicationVersion(VK_MAKE_VERSION(0, 0, 1))
@@ -209,9 +209,10 @@ ResultValue<vk::PhysicalDevice> Instance::FindSuitablePhysicalDevice(
     return {chosenDeviceScore > 0 ? Result::Success : Result::NoSuitableDeviceError, chosenDevice};
 }
 
-vk::SurfaceKHR Instance::CreateSurface(Window* window) {
+vk::SurfaceKHR Instance::CreateSurface(ScopedRefPtr<Window> window) {
     VkSurfaceKHR surface;
-    VKRT_ASSERT_VK(vk::Result(glfwCreateWindowSurface(mInstanceHandle, window->GetNativeHandle(), nullptr, &surface)));
+    VKRT_ASSERT_VK(vk::Result(
+        glfwCreateWindowSurface(mInstanceHandle, window->GetNativeHandle(), nullptr, &surface)));
     return surface;
 }
 

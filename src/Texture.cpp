@@ -6,7 +6,7 @@
 
 namespace VKRT {
 Texture::Texture(
-    Context* context,
+    ScopedRefPtr<Context> context,
     uint32_t width,
     uint32_t height,
     vk::Format format,
@@ -18,7 +18,7 @@ Texture::Texture(
           height,
           format,
           vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled) {
-    VulkanBuffer* stagingBuffer = VulkanBuffer::Create(
+    ScopedRefPtr<VulkanBuffer> stagingBuffer = VulkanBuffer::Create(
         mContext,
         bufferSize,
         vk::BufferUsageFlagBits::eTransferSrc,
@@ -63,12 +63,10 @@ Texture::Texture(
     VKRT_ASSERT_VK(commandBuffer.end());
     mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
-
-    stagingBuffer->Release();
 }
 
 Texture::Texture(
-    Context* context,
+    ScopedRefPtr<Context> context,
     uint32_t width,
     uint32_t height,
     vk::Format format,
@@ -169,8 +167,6 @@ Texture::~Texture() {
         logicalDevice.destroyImage(mImage);
         logicalDevice.freeMemory(mMemory);
     }
-
-    mContext->Release();
 }
 
 }  // namespace VKRT

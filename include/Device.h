@@ -14,11 +14,16 @@ class Context;
 
 class Device : public RefCountPtr {
 public:
-    static ResultValue<Device*> Create(Instance* instance, const vk::SurfaceKHR& surface);
+    static ResultValue<ScopedRefPtr<Device>> Create(
+        ScopedRefPtr<Instance> instance,
+        const vk::SurfaceKHR& surface);
 
-    Device(Instance* instance, vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& surface);
+    Device(
+        ScopedRefPtr<Instance> instance,
+        vk::PhysicalDevice physicalDevice,
+        const vk::SurfaceKHR& surface);
 
-    void SetContext(Context* context);
+    void SetContext(ScopedRefPtr<Context> context);
 
     // Memory handling
     vk::DeviceMemory AllocateMemory(
@@ -26,7 +31,7 @@ public:
         const vk::MemoryRequirements memoryRequirements,
         const vk::MemoryAllocateFlags& memoryAllocateFlags = {});
 
-    VulkanBuffer* CreateBuffer(
+    ScopedRefPtr<VulkanBuffer> CreateBuffer(
         const vk::DeviceSize& size,
         const vk::BufferUsageFlags& usageFlags,
         const vk::MemoryPropertyFlags& memoryFlags,
@@ -58,7 +63,7 @@ public:
     ~Device();
 
 private:
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
     vk::PhysicalDevice mPhysicalDevice;
     vk::Device mLogicalDevice;
     vk::Queue mGraphicsQueue;

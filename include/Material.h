@@ -19,15 +19,15 @@ public:
         float roughness,
         float metallic,
         float indexOfRefraction,
-        Texture* albedoTexture = nullptr,
-        Texture* roughnessTexture = nullptr);
+        ScopedRefPtr<Texture> albedoTexture = nullptr,
+        ScopedRefPtr<Texture> roughnessTexture = nullptr);
 
     const glm::vec3 GetAlbedo() const { return mAlbedo; }
     const float GetRoughness() const { return mRoughness; }
     const float GetMetallic() const { return mMetallic; }
     const float GetIndexOfRefraction() const { return mIndexOfRefraction; }
-    const Texture* GetAlbedoTexture() const { return mAlbedoTexture; }
-    const Texture* GetRoughnessTexture() const { return mRoughnessTexture; }
+    const ScopedRefPtr<Texture> GetAlbedoTexture() const { return mAlbedoTexture; }
+    const ScopedRefPtr<Texture> GetRoughnessTexture() const { return mRoughnessTexture; }
 
     void SetAlbedo(const glm::vec3& albedo) { mAlbedo = albedo; }
     void SetRoughness(float roughness) { mRoughness = roughness; }
@@ -42,7 +42,7 @@ private:
     float mMetallic;
     float mIndexOfRefraction;
 
-    Texture* mAlbedoTexture;
-    Texture* mRoughnessTexture;
+    ScopedRefPtr<Texture> mAlbedoTexture;
+    ScopedRefPtr<Texture> mRoughnessTexture;
 };
 }  // namespace VKRT

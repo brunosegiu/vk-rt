@@ -5,15 +5,14 @@
 #include <glm/gtc/quaternion.hpp>
 
 namespace VKRT {
-Camera::Camera(Window* window)
+Camera::Camera(ScopedRefPtr<Window> window)
     : mWindow(window),
       mMovementSpeed(2.0f),
       mRotationSpeed(100.0f),
       mActive(false),
       mSpeedModifierActive(false),
       mCurrentMousePos(0.0, 0.0) {
-    mWindow->AddRef();
-    InputManager* inputManager = mWindow->GetInputManager();
+    ScopedRefPtr<InputManager> inputManager = mWindow->GetInputManager();
     inputManager->Subscribe(this);
 
     mEulerRotation = glm::vec3(0.0);
@@ -139,6 +138,5 @@ void Camera::OnRightMouseButtonReleased() {}
 Camera::~Camera() {
     InputManager* inputManager = mWindow->GetInputManager();
     inputManager->Unsuscribe(this);
-    mWindow->Release();
 }
 }  // namespace VKRT

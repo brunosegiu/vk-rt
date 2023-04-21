@@ -7,9 +7,9 @@
 #include <glm/glm.hpp>
 
 #include "RefCountPtr.h"
-#include "Window.h"
 
 namespace VKRT {
+class Window;
 
 class InputEventListener {
 public:

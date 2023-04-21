@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include "Window.h"
+
 namespace VKRT {
 InputManager::InputManager(Window* window) : mWindow(window) {
     glfwSetWindowUserPointer(mWindow->GetNativeHandle(), this);
@@ -89,8 +91,6 @@ void InputManager::MouseButtonCallback(int button, int action, int mods) {
     }
 }
 
-InputManager::~InputManager() {
-    mWindow->Release();
-}
+InputManager::~InputManager() {}
 
 }  // namespace VKRT

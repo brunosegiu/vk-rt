@@ -14,10 +14,10 @@ class Context;
 
 class Scene : public RefCountPtr {
 public:
-    Scene(Context* context);
+    Scene(ScopedRefPtr<Context> context);
 
-    void AddObject(Object* object);
-    void AddLight(Light* light);
+    void AddObject(ScopedRefPtr<Object> object);
+    void AddLight(ScopedRefPtr<Light> light);
 
     const vk::AccelerationStructureKHR& GetTLAS() const { return mTLAS; }
 
@@ -34,7 +34,7 @@ public:
     };
     struct SceneMaterials {
         std::vector<MaterialProxy> materials;
-        std::vector<const Texture*> textures;
+        std::vector<ScopedRefPtr<Texture>> textures;
     };
     SceneMaterials GetMaterialProxies();
 
@@ -43,14 +43,14 @@ public:
     ~Scene();
 
 private:
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
 
-    std::vector<Object*> mObjects;
-    std::vector<Light*> mLights;
+    std::vector<ScopedRefPtr<Object>> mObjects;
+    std::vector<ScopedRefPtr<Light>> mLights;
 
     bool mCommitted;
-    VulkanBuffer* mInstanceBuffer;
-    VulkanBuffer* mTLASBuffer;
+    ScopedRefPtr<VulkanBuffer> mInstanceBuffer;
+    ScopedRefPtr<VulkanBuffer> mTLASBuffer;
     vk::AccelerationStructureKHR mTLAS;
     vk::DeviceAddress mTLASAddress;
 };

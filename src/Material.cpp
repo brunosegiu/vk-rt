@@ -12,29 +12,15 @@ Material::Material(
     float roughness,
     float metallic,
     float indexOfRefraction,
-    Texture* albedoTexture,
-    Texture* roughnessTexture)
+    ScopedRefPtr<Texture> albedoTexture,
+    ScopedRefPtr<Texture> roughnessTexture)
     : mAlbedo(albedo),
       mRoughness(roughness),
       mMetallic(metallic),
       mIndexOfRefraction(indexOfRefraction),
       mAlbedoTexture(albedoTexture),
-      mRoughnessTexture(roughnessTexture) {
-    if (mAlbedoTexture != nullptr) {
-        mAlbedoTexture->AddRef();
-    }
-    if (mRoughnessTexture != nullptr) {
-        mRoughnessTexture->AddRef();
-    }
-}
+      mRoughnessTexture(roughnessTexture) {}
 
-Material::~Material() {
-    if (mAlbedoTexture != nullptr) {
-        mAlbedoTexture->Release();
-    }
-    if (mRoughnessTexture != nullptr) {
-        mRoughnessTexture->Release();
-    }
-}
+Material::~Material() {}
 
 }  // namespace VKRT

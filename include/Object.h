@@ -8,9 +8,9 @@ namespace VKRT {
 
 class Object : public RefCountPtr {
 public:
-    Object(Model* model);
+    Object(ScopedRefPtr<Model> model);
 
-    const Model* GetModel() const { return mModel; }
+    const ScopedRefPtr<Model> GetModel() const { return mModel; }
     const glm::mat4& GetTransform() const { return mTransform; }
 
     void SetTranslation(const glm::vec3& position);
@@ -26,7 +26,7 @@ public:
 private:
     void UpdateTransform();
 
-    Model* mModel;
+    ScopedRefPtr<Model> mModel;
     glm::mat4 mTransform;
     glm::vec3 mEulerRotation;
     glm::vec3 mScale;

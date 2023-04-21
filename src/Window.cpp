@@ -4,12 +4,11 @@
 
 #include "Context.h"
 #include "Device.h"
-#include "InputManager.h"
 #include "Instance.h"
 
 namespace VKRT {
 
-ResultValue<Window*> Window::Create() {
+ResultValue<ScopedRefPtr<Window>> Window::Create() {
     return {Result::Success, new Window()};
 }
 
@@ -46,7 +45,7 @@ Window::Size2D Window::GetSize() {
     return size;
 }
 
-ResultValue<Context*> Window::CreateContext() {
+ResultValue<ScopedRefPtr<Context>> Window::CreateContext() {
     if (mContext == nullptr) {
         auto [instanceResult, instance] = Instance::Create(this);
         if (instanceResult == Result::Success) {
@@ -54,10 +53,8 @@ ResultValue<Context*> Window::CreateContext() {
             auto [deviceResult, device] = Device::Create(instance, surface);
             if (deviceResult == Result::Success) {
                 mContext = new Context(this, instance, surface, device);
-                mContext->AddRef();
                 return {Result::Success, mContext};
             } else {
-                instance->Release();
                 return {deviceResult, nullptr};
             }
         }
@@ -66,12 +63,14 @@ ResultValue<Context*> Window::CreateContext() {
     return {Result::Success, mContext};
 }
 
+void Window::DestroyContext() {
+    mContext->Destroy();
+    mContext = nullptr;
+}
+
 Window::~Window() {
     if (mNativeHandle != nullptr) {
         glfwDestroyWindow(mNativeHandle);
-    }
-    if (mContext != nullptr) {
-        mContext->Release();
     }
     glfwTerminate();
 }

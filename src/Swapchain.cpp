@@ -9,9 +9,7 @@
 
 namespace VKRT {
 
-Swapchain::Swapchain(Context* context) : mContext(context), mCurrentImageIndex(0) {
-    mContext->AddRef();
-
+Swapchain::Swapchain(ScopedRefPtr<Context> context) : mContext(context), mCurrentImageIndex(0) {
     Device::SwapchainCapabilities swapchainCapabilities =
         mContext->GetDevice()->GetSwapchainCapabilities(mContext->GetSurface());
 
@@ -85,7 +83,7 @@ Swapchain::Swapchain(Context* context) : mContext(context), mCurrentImageIndex(0
         VKRT_ASSERT_VK(logicalDevice.getSwapchainImagesKHR(mSwapchainHandle));
 
     for (vk::Image& image : images) {
-        Texture* texture =
+        ScopedRefPtr<Texture> texture =
             new Texture(mContext, surfaceExtent.width, surfaceExtent.height, mFormat, {}, image);
         mImages.emplace_back(texture);
     }
@@ -115,10 +113,7 @@ Swapchain::~Swapchain() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroySemaphore(mRenderSemaphore);
     logicalDevice.destroySemaphore(mPresentSemaphore);
-    for (Texture* texture : mImages) {
-        texture->Release();
-    }
+    mImages.clear();
     logicalDevice.destroySwapchainKHR(mSwapchainHandle);
-    mContext->Release();
 }
 }  // namespace VKRT

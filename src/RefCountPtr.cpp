@@ -1,7 +1,7 @@
 #include "RefCountPtr.h"
 
 namespace VKRT {
-RefCountPtr::RefCountPtr() : refCount(1) {}
+RefCountPtr::RefCountPtr() : refCount(0) {}
 
 void RefCountPtr::AddRef() {
     ++refCount;

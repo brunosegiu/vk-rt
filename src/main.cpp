@@ -2,6 +2,7 @@
 
 #include "Camera.h"
 #include "Context.h"
+#include "DebugUtils.h"
 #include "Renderer.h"
 #include "Scene.h"
 #include "Window.h"
@@ -24,47 +25,51 @@ struct Timer {
 int main() {
     using namespace VKRT;
     auto [windowResult, window] = Window::Create();
+    VKRT_ASSERT_MSG(windowResult == Result::Success, "Couldn't create window");
     if (windowResult == Result::Success) {
         auto [contextResult, context] = window->CreateContext();
+        VKRT_ASSERT_MSG(contextResult == Result::Success, "No compatible GPU found");
         if (contextResult == Result::Success) {
-            Scene* scene = new Scene(context);
+            ScopedRefPtr<Scene> scene = new Scene(context);
 #if defined(VKRT_PLATFORM_WINDOWS)
             std::string userDir = std::getenv("USERPROFILE");
 #elif defined(VKRT_PLATFORM_LINUX)
             std::string userDir = std::getenv("HOME");
 #endif
-            Model* helmet = Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
-            Model* sponza = Model::Load(context, userDir + "/assets/sponza_b.gltf");
-            Model* sphere = Model::Load(context, userDir + "/assets/sphere.gltf");
-            Model* venus = Model::Load(context, userDir + "/assets/venus.gltf");
+            userDir = ".";
+            ScopedRefPtr<Model> helmet =
+                Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
+            ScopedRefPtr<Model> sponza = Model::Load(context, userDir + "/assets/sponza_b.gltf");
+            ScopedRefPtr<Model> sphere = Model::Load(context, userDir + "/assets/sphere.gltf");
+            ScopedRefPtr<Model> venus = Model::Load(context, userDir + "/assets/venus.gltf");
             std::for_each(sphere->GetMeshes().begin(), sphere->GetMeshes().end(), [](Mesh* mesh) {
                 mesh->GetMaterial()->SetMetallic(1.0f);
             });
             std::for_each(venus->GetMeshes().begin(), venus->GetMeshes().end(), [](Mesh* mesh) {
                 mesh->GetMaterial()->SetIndexOfRefraction(1.5f);
             });
-            Camera* camera = new Camera(window);
+            ScopedRefPtr<Camera> camera = new Camera(window);
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
-            DirectionalLight* light = new DirectionalLight();
+            ScopedRefPtr<DirectionalLight> light = new DirectionalLight();
             light->SetIntensity(0.5f);
 
-            PointLight* pointLight = new PointLight();
+            ScopedRefPtr<PointLight> pointLight = new PointLight();
             pointLight->SetIntensity(30.0f);
             pointLight->SetPosition(glm::vec3(0.0f, 80.3f, -3.0f));
 
-            Object* object1 = new Object(helmet);
+            ScopedRefPtr<Object> object1 = new Object(helmet);
             object1->SetTranslation(glm::vec3(-4.0f, 3.0f, 2.0f));
             object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object1->SetScale(glm::vec3(1.5f));
-            Object* object2 = new Object(venus);
+            ScopedRefPtr<Object> object2 = new Object(venus);
             object2->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
             object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object2->SetScale(glm::vec3(.5f));
-            Object* object3 = new Object(sphere);
+            ScopedRefPtr<Object> object3 = new Object(sphere);
             object3->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
             object3->SetScale(glm::vec3(1.0f));
-            Object* object4 = new Object(sponza);
+            ScopedRefPtr<Object> object4 = new Object(sponza);
             object4->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             object4->SetScale(glm::vec3(0.03f));
 
@@ -78,7 +83,7 @@ int main() {
 
             scene->Commit();
 
-            Renderer* render = new Renderer(context, scene);
+            ScopedRefPtr<Renderer> renderer = new Renderer(context, scene);
             Timer timer;
             double elapsedSeconds = 0.0;
             double totalSeconds = 0.0;
@@ -88,23 +93,14 @@ int main() {
                 pointLight->SetPosition(glm::vec3(-35.0f, 3.0f, 5.5f * cos(totalSeconds)));
                 timer.Start();
                 camera->Update(elapsedSeconds);
-                render->Render(camera);
+                renderer->Render(camera);
                 elapsedSeconds = timer.ElapsedSeconds();
                 totalSeconds += elapsedSeconds;
             }
-            object1->Release();
-            object2->Release();
-            object3->Release();
-            light->Release();
-
-            render->Release();
-            camera->Release();
-            sphere->Release();
-            helmet->Release();
-            scene->Release();
-            sponza->Release();
-            context->Release();
+        }
+        if (context != nullptr) {
+            window->DestroyContext();
         }
     }
-    window->Release();
+    return 0;
 }

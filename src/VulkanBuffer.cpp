@@ -5,8 +5,8 @@
 
 namespace VKRT {
 
-VulkanBuffer* VulkanBuffer::Create(
-    Context* context,
+ScopedRefPtr<VulkanBuffer> VulkanBuffer::Create(
+    ScopedRefPtr<Context> context,
     const vk::DeviceSize& size,
     const vk::BufferUsageFlags& usageFlags,
     const vk::MemoryPropertyFlags& memoryFlags,
@@ -32,7 +32,7 @@ VulkanBuffer* VulkanBuffer::Create(
 }
 
 VulkanBuffer::VulkanBuffer(
-    Context* context,
+    ScopedRefPtr<Context> context,
     vk::DeviceSize size,
     vk::Buffer bufferHandle,
     vk::DeviceMemory memoryHandle,
@@ -41,9 +41,7 @@ VulkanBuffer::VulkanBuffer(
       mSize(size),
       mBufferHandle(bufferHandle),
       mMemoryHandle(memoryHandle),
-      mDescriptorInfo(descriptorInfo) {
-    mContext->AddRef();
-}
+      mDescriptorInfo(descriptorInfo) {}
 
 uint8_t* VulkanBuffer::MapBuffer() {
     const vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
@@ -66,7 +64,6 @@ VulkanBuffer::~VulkanBuffer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyBuffer(mBufferHandle);
     logicalDevice.freeMemory(mMemoryHandle);
-    mContext->Release();
 }
 
 }  // namespace VKRT

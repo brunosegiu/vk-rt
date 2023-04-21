@@ -6,14 +6,12 @@
 
 namespace VKRT {
 
-Object::Object(Model* model)
+Object::Object(ScopedRefPtr<Model> model)
     : mModel(model),
       mTransform(1.0f),
       mPosition(0.0f),
       mEulerRotation(0.0f),
-      mScale(1.0f, 1.0f, 1.0f) {
-    mModel->AddRef();
-}
+      mScale(1.0f, 1.0f, 1.0f) {}
 
 void Object::SetTranslation(const glm::vec3& position) {
     mPosition = position;
@@ -51,8 +49,6 @@ void Object::UpdateTransform() {
     mTransform = glm::scale(mTransform, mScale);
 }
 
-Object::~Object() {
-    mModel->Release();
-}
+Object::~Object() {}
 
 }  // namespace VKRT

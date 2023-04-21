@@ -13,7 +13,7 @@ class Texture;
 
 class Swapchain : public RefCountPtr {
 public:
-    Swapchain(Context* context);
+    Swapchain(ScopedRefPtr<Context> context);
 
     vk::Format GetFormat() { return mFormat; }
     vk::Extent2D GetExtent() { return mExtent; }
@@ -29,11 +29,11 @@ public:
     ~Swapchain();
 
 private:
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
     vk::SwapchainKHR mSwapchainHandle;
     vk::Format mFormat;
     vk::Extent2D mExtent;
-    std::vector<Texture*> mImages;
+    std::vector<ScopedRefPtr<Texture>> mImages;
     vk::Semaphore mPresentSemaphore;
     vk::Semaphore mRenderSemaphore;
     uint32_t mCurrentImageIndex;

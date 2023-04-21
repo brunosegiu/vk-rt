@@ -13,18 +13,18 @@ namespace VKRT {
 
 class Model : public RefCountPtr {
 public:
-    static Model* Load(Context* context, const std::string& path);
+    static Model* Load(ScopedRefPtr<Context>, const std::string& path);
 
-    Model(Context* context, const std::vector<Mesh*>& meshes);
+    Model(ScopedRefPtr<Context>, const std::vector<ScopedRefPtr<Mesh>>& meshes);
 
-    const std::vector<Mesh*>& GetMeshes() const { return mMeshes; }
+    const std::vector<ScopedRefPtr<Mesh>>& GetMeshes() const { return mMeshes; }
     std::vector<Mesh::Description> GetDescriptions() const;
 
     ~Model();
 
 private:
-    Context* mContext;
-    std::vector<Mesh*> mMeshes;
+    ScopedRefPtr<Context> mContext;
+    std::vector<ScopedRefPtr<Mesh>> mMeshes;
 };
 
 }  // namespace VKRT

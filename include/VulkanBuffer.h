@@ -9,8 +9,8 @@ class Device;
 
 class VulkanBuffer : public RefCountPtr {
 public:
-    static VulkanBuffer* Create(
-        Context* context,
+    static ScopedRefPtr<VulkanBuffer> Create(
+        ScopedRefPtr<Context> context,
         const vk::DeviceSize& size,
         const vk::BufferUsageFlags& usageFlags,
         const vk::MemoryPropertyFlags& memoryFlags,
@@ -27,7 +27,7 @@ public:
 
 private:
     VulkanBuffer(
-        Context* context,
+        ScopedRefPtr<Context> context,
         vk::DeviceSize size,
         vk::Buffer bufferHandle,
         vk::DeviceMemory memoryHandle,
@@ -35,7 +35,7 @@ private:
 
     ~VulkanBuffer() override;
 
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
     vk::DeviceSize mSize;
     vk::Buffer mBufferHandle;
     vk::DeviceMemory mMemoryHandle;

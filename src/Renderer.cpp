@@ -4,9 +4,8 @@
 #include "Texture.h"
 
 namespace VKRT {
-Renderer::Renderer(Context* context, Scene* scene) : mContext(context), mScene(scene) {
-    mContext->AddRef();
-    mScene->AddRef();
+Renderer::Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene)
+    : mContext(context), mScene(scene) {
     Scene::SceneMaterials materials = mScene->GetMaterialProxies();
     mPipeline = new RayTracingPipeline(mContext);
     CreateStorageImage();
@@ -179,7 +178,6 @@ void Renderer::UpdateLightUniforms() {
     {
         const size_t lightProxiesBufferSize = sizeof(Light::Proxy) * lightProxies.size();
         if (lightProxiesBufferSize != mLightUniformBuffer->GetBufferSize()) {
-            mLightUniformBuffer->Release();
             mLightUniformBuffer = mContext->GetDevice()->CreateBuffer(
                 lightProxiesBufferSize,
                 vk::BufferUsageFlagBits::eUniformBuffer,
@@ -443,19 +441,7 @@ void Renderer::Render(Camera* camera) {
 Renderer::~Renderer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyDescriptorPool(mDescriptorPool);
-
-    mMaterialsBuffer->Release();
     logicalDevice.destroySampler(mTextureSampler);
-    mLightUniformBuffer->Release();
-    mLightMetadataUniformBuffer->Release();
-    mCameraUniformBuffer->Release();
-    mSceneUniformBuffer->Release();
-
-    mStorageTexture->Release();
-
-    mPipeline->Release();
-    mScene->Release();
-    mContext->Release();
 }
 
 }  // namespace VKRT

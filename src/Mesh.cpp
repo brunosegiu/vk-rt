@@ -7,14 +7,11 @@
 namespace VKRT {
 
 Mesh::Mesh(
-    Context* context,
+    ScopedRefPtr<Context> context,
     const std::vector<Vertex>& vertices,
     const std::vector<glm::uvec3>& indices,
-    Material* material)
+    ScopedRefPtr<Material> material)
     : mContext(context), mMaterial(material) {
-    mContext->AddRef();
-    mMaterial->AddRef();
-
     uint32_t triangleCount = indices.size();
     VkTransformMatrixKHR transformMatrix =
         {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
@@ -110,7 +107,7 @@ Mesh::Mesh(
         nullptr,
         mContext->GetDevice()->GetDispatcher()));
 
-    VulkanBuffer* scratchBuffer = mContext->GetDevice()->CreateBuffer(
+    ScopedRefPtr<VulkanBuffer> scratchBuffer = mContext->GetDevice()->CreateBuffer(
         buildSizesInfo.buildScratchSize,
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -147,8 +144,6 @@ Mesh::Mesh(
     mBLASAddress = logicalDevice.getAccelerationStructureAddressKHR(
         accelerationDeviceAddressInfo,
         mContext->GetDevice()->GetDispatcher());
-
-    scratchBuffer->Release();
 }
 
 Mesh::Description Mesh::GetDescription() const {
@@ -163,11 +158,6 @@ Mesh::~Mesh() {
         mBLAS,
         nullptr,
         mContext->GetDevice()->GetDispatcher());
-    mBLASBuffer->Release();
-    mTransformBuffer->Release();
-    mIndexBuffer->Release();
-    mVertexBuffer->Release();
-    mContext->Release();
 }
 
 }  // namespace VKRT

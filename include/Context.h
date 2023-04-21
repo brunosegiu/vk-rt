@@ -14,22 +14,28 @@
 namespace VKRT {
 class Context : public RefCountPtr {
 public:
-    Context(Window* window, Instance* instance, vk::SurfaceKHR surface, Device* device);
+    Context(
+        ScopedRefPtr<Window> window,
+        ScopedRefPtr<Instance> instance,
+        vk::SurfaceKHR surface,
+        ScopedRefPtr<Device> device);
 
-    Window* GetWindow() { return mWindow; }
-    Instance* GetInstance() { return mInstance; }
+    ScopedRefPtr<Window> GetWindow() { return mWindow; }
+    ScopedRefPtr<Instance> GetInstance() { return mInstance; }
     const vk::SurfaceKHR& GetSurface() { return mSurface; }
-    Device* GetDevice() { return mDevice; }
-    Swapchain* GetSwapchain() { return mSwapchain; }
+    ScopedRefPtr<Device> GetDevice() { return mDevice; }
+    ScopedRefPtr<Swapchain> GetSwapchain() { return mSwapchain; }
+
+    void Destroy();
 
     ~Context();
 
 private:
-    Window* mWindow;
+    ScopedRefPtr<Window> mWindow;
     vk::SurfaceKHR mSurface;
-    Instance* mInstance;
-    Device* mDevice;
-    Swapchain* mSwapchain;
+    ScopedRefPtr<Instance> mInstance;
+    ScopedRefPtr<Device> mDevice;
+    ScopedRefPtr<Swapchain> mSwapchain;
 };
 
 }  // namespace VKRT

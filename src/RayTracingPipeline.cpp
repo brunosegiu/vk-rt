@@ -8,9 +8,7 @@
 enum class RayTracingStage { Generate = 0, Hit, Miss, ShadowMiss };
 
 namespace VKRT {
-RayTracingPipeline::RayTracingPipeline(Context* context) : mContext(context) {
-    mContext->AddRef();
-
+RayTracingPipeline::RayTracingPipeline(ScopedRefPtr<Context> context) : mContext(context) {
     vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(0)
@@ -285,14 +283,11 @@ vk::ShaderModule RayTracingPipeline::LoadShader(Resource::Id shaderId) {
 
 RayTracingPipeline::~RayTracingPipeline() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    mRayGenTable->Release();
-    mRayHitTable->Release();
-    mRayMissTable->Release();
     for (vk::ShaderModule& shader : mShaders) {
         logicalDevice.destroyShaderModule(shader);
     }
+    logicalDevice.destroyDescriptorSetLayout(mDescriptorLayout);
     logicalDevice.destroyPipeline(mPipeline);
     logicalDevice.destroyPipelineLayout(mLayout);
-    mContext->Release();
 }
 }  // namespace VKRT

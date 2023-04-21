@@ -10,7 +10,7 @@ class Device;
 class Texture : public RefCountPtr {
 public:
     Texture(
-        Context* context,
+        ScopedRefPtr<Context> context,
         uint32_t width,
         uint32_t height,
         vk::Format format,
@@ -18,7 +18,7 @@ public:
         vk::Image image = nullptr);
 
     Texture(
-        Context* context,
+        ScopedRefPtr<Context> context,
         uint32_t width,
         uint32_t height,
         vk::Format format,
@@ -38,7 +38,7 @@ public:
     ~Texture();
 
 private:
-    Context* mContext;
+    ScopedRefPtr<Context> mContext;
 
     vk::Image mImage;
     vk::DeviceMemory mMemory;
