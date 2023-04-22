@@ -82,5 +82,10 @@ vec3 getProceduralSkyColor(
 
 void main() {
     ProceduralSkyShaderParameters params = initSkyShaderParameters(-lightMetadata.sunDirection.xyz);
-    rayPayload.color += getProceduralSkyColor(params, gl_WorldRayDirectionEXT, 0);
+    rayPayload.color = getProceduralSkyColor(params, gl_WorldRayDirectionEXT, 0);
+    rayPayload.position = vec3(0.0f);
+    rayPayload.normal = vec3(0.0f);
+    rayPayload.metallic = 0.0f;
+    rayPayload.indexOfRefraction = 0.0f;
+    rayPayload.metallicFalloff = 1.0f;
 }

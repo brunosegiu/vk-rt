@@ -12,10 +12,13 @@ const uint DefaultCullMask = 0xFF;
 const uint DefaultSBTOffset = 0;
 const uint DefaultSBTStride = 0;
 
-const vec3 AmbientTerm = vec3(0.05);
+const vec3 AmbientTerm = vec3(0.01);
 
-const float MetallicCuttoff = 0.01f;
 const float Bias = 0.01f;
+
+const float Pi = 3.14159265359f;
+
+const uint MaxRecursionLevel = 8;
 
 struct MeshDescription {
     uint64_t vertexBufferAddress;
@@ -48,6 +51,9 @@ struct Material {
 
 struct RayPayload {
     vec3 color;
-    vec3 weight;
-    int depth;
+    vec3 position;
+    vec3 normal;
+    float metallic;
+    float indexOfRefraction;
+    float metallicFalloff;
 };

@@ -96,116 +96,117 @@ void getRoughnessAndMetallic(
     }
 }
 
-vec3 getDirectIllumination(
-    const Vertex vertex,
-    const vec3 albedo,
-    const float roughness,
-    const float metallic) {
-    vec3 color = albedo * AmbientTerm;
-    for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
-        Light light = lights.values[lightIndex];
-        vec3 lightDir;
-        float lightIntensity = light.intensity;
-        float lightDistance = TMax;
-        switch (light.type) {
-            case LightTypeDirectional: {
-                lightDir = -light.directionOrPosition;
-            } break;
-            case LightTypePoint: {
-                lightDir = light.directionOrPosition - vertex.position;
-                lightDistance = length(lightDir);
-                lightIntensity = lightIntensity / (lightDistance * lightDistance);
-                lightDir = lightDir / lightDistance;
-            } break;
-        }
-        const float nDotL = max(dot(vertex.normal, lightDir), 0.0);
-        if (nDotL > 0.0) {
-            const vec3 shadowRayOrigin = vertex.position;
-            const vec3 shadowRayDirection = lightDir;
-            shadowAttenuation = 0.0f;
-            traceRayEXT(
-                topLevelAS,
-                gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT |
-                    gl_RayFlagsSkipClosestHitShaderEXT,
-                DefaultCullMask,
-                DefaultSBTOffset,
-                DefaultSBTStride,
-                ShadowMissIndex,
-                shadowRayOrigin,
-                TMin,
-                shadowRayDirection,
-                lightDistance,
-                ShadowPayloadIndex);
-            color += nDotL * albedo * lightIntensity * shadowAttenuation;
-        }
-    }
-    return color;
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float num = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = Pi * denom * denom;
+
+    return num / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float roughness) {
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+
+    float num = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return num / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+float traceShadowRay(const vec3 origin, const vec3 direction, float distance) {
+    shadowAttenuation = 0.0f;
+    traceRayEXT(
+        topLevelAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT |
+            gl_RayFlagsSkipClosestHitShaderEXT,
+        DefaultCullMask,
+        DefaultSBTOffset,
+        DefaultSBTStride,
+        ShadowMissIndex,
+        origin,
+        TMin,
+        direction,
+        distance,
+        ShadowPayloadIndex);
+    return shadowAttenuation;
 }
 
 void main() {
-    Vertex vertex = unpackInstanceVertex(gl_InstanceCustomIndexEXT);
-    Material material = unpackInstanceMaterial(gl_InstanceCustomIndexEXT);
+    const Vertex vertex = unpackInstanceVertex(gl_InstanceCustomIndexEXT);
+    const Material material = unpackInstanceMaterial(gl_InstanceCustomIndexEXT);
 
-    vec3 albedo = getAlbedo(material, vertex.texCoord);
+    const vec3 albedo = getAlbedo(material, vertex.texCoord);
     float roughness, metallic;
     getRoughnessAndMetallic(material, vertex.texCoord, roughness, metallic);
 
     const vec3 rayOrigin = vertex.position;
     const vec3 rayDirection = normalize(gl_WorldRayDirectionEXT);
 
-    vec3 directIlluminationTerm = vec3(0.0);
-    if (material.indexOfRefraction <= 0.0) {
-        directIlluminationTerm = getDirectIllumination(vertex, albedo, roughness, metallic);
-    }
+    const vec3 N = vertex.normal;
+    const vec3 V = -rayDirection;
 
-    rayPayload.color += directIlluminationTerm * rayPayload.weight;
-    rayPayload.depth += 1;
-    rayPayload.weight *= metallic;
-
-    if (metallic > MetallicCuttoff && rayPayload.depth < 10) {
-        const vec3 reflectionOrigin = rayOrigin;
-        const vec3 reflectionDirection =
-            reflect(rayDirection, vertex.normal) + vertex.normal * Bias;
-        traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            DefaultCullMask,
-            DefaultSBTOffset,
-            DefaultSBTStride,
-            ColorMissIndex,
-            reflectionOrigin,
-            TMin,
-            reflectionDirection,
-            TMax,
-            ColorPayloadIndex);
-    }
-
-    if (material.indexOfRefraction > 0.0 && rayPayload.depth < 10) {
-        rayPayload.depth += 1;
-        rayPayload.weight = vec3(1.0);
-        const bool isFrontFacing = gl_HitKindEXT == gl_HitKindFrontFacingTriangleEXT;
-        float refractionRatio;
-        vec3 refractionNormal;
-        if (isFrontFacing) {
-            refractionRatio = 1.0f / material.indexOfRefraction;
-            refractionNormal = vertex.normal;
-        } else {
-            refractionRatio = material.indexOfRefraction;
-            refractionNormal = -vertex.normal;
+    const vec3 f0 = mix(vec3(0.04), albedo, metallic);
+    const vec3 diffuseColor = albedo * vec3(1.0f - f0) * (1.0f - metallic);
+    vec3 color = diffuseColor * AmbientTerm;
+    if (material.indexOfRefraction < 0.0f) {
+        for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
+            Light light = lights.values[lightIndex];
+            vec3 L;
+            float lightIntensity = light.intensity;
+            float lightDistance = TMax;
+            switch (light.type) {
+                case LightTypeDirectional: {
+                    L = -light.directionOrPosition;
+                } break;
+                case LightTypePoint: {
+                    L = light.directionOrPosition - vertex.position;
+                    lightDistance = length(L);
+                    lightIntensity = lightIntensity / (lightDistance * lightDistance);
+                    L = L / lightDistance;
+                } break;
+            }
+            const vec3 H = normalize(V + L);
+            const float nDotL = max(dot(vertex.normal, L), 0.0);
+            if (nDotL > 0.0) {
+                const float shadowAttenuation = traceShadowRay(vertex.position, L, lightDistance);
+                float NDF = DistributionGGX(N, H, roughness);
+                float G = GeometrySmith(N, V, L, roughness);
+                vec3 F = fresnelSchlick(max(dot(H, V), 0.0), f0);
+                vec3 kS = F;
+                vec3 kD = vec3(1.0) - kS;
+                kD *= 1.0 - metallic;
+                vec3 numerator = NDF * G * F;
+                float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+                vec3 specular = numerator / denominator;
+                color += shadowAttenuation * nDotL * lightIntensity *
+                         (kD * diffuseColor / Pi + specular);
+            }
         }
-        vec3 refractionOrigin = rayOrigin;
-        vec3 refractedDirection = refract(rayDirection, refractionNormal, refractionRatio);
-        traceRayEXT(
-            topLevelAS,
-            gl_RayFlagsOpaqueEXT,
-            DefaultCullMask,
-            DefaultSBTOffset,
-            DefaultSBTStride,
-            ColorMissIndex,
-            refractionOrigin,
-            TMin,
-            refractedDirection,
-            TMax,
-            ColorPayloadIndex);
     }
+
+    rayPayload.color = color;
+    rayPayload.position = vertex.position;
+    rayPayload.normal = vertex.normal;
+    rayPayload.metallic = metallic;
+    rayPayload.indexOfRefraction = material.indexOfRefraction;
+    rayPayload.metallicFalloff = metallic * (1.0f - roughness) * (1.0f - roughness);
 }

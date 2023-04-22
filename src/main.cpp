@@ -36,47 +36,55 @@ int main() {
 #elif defined(VKRT_PLATFORM_LINUX)
             std::string userDir = std::getenv("HOME");
 #endif
-            userDir = ".";
-            ScopedRefPtr<Model> helmet =
+            ScopedRefPtr<Model> helmetModel =
                 Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
-            ScopedRefPtr<Model> sponza = Model::Load(context, userDir + "/assets/sponza_b.gltf");
-            ScopedRefPtr<Model> sphere = Model::Load(context, userDir + "/assets/sphere.gltf");
-            ScopedRefPtr<Model> venus = Model::Load(context, userDir + "/assets/venus.gltf");
-            std::for_each(sphere->GetMeshes().begin(), sphere->GetMeshes().end(), [](Mesh* mesh) {
-                mesh->GetMaterial()->SetMetallic(1.0f);
-            });
-            std::for_each(venus->GetMeshes().begin(), venus->GetMeshes().end(), [](Mesh* mesh) {
-                mesh->GetMaterial()->SetIndexOfRefraction(1.5f);
-            });
+            ScopedRefPtr<Model> sponzaModel =
+                Model::Load(context, userDir + "/assets/sponza_b.gltf");
+            ScopedRefPtr<Model> sphereModel = Model::Load(context, userDir + "/assets/sphere.gltf");
+            ScopedRefPtr<Model> venusModel = Model::Load(context, userDir + "/assets/venus.gltf");
+            std::for_each(
+                sphereModel->GetMeshes().begin(),
+                sphereModel->GetMeshes().end(),
+                [](Mesh* mesh) {
+                    mesh->GetMaterial()->SetMetallic(1.0f);
+                    mesh->GetMaterial()->SetRoughness(0.0f);
+                });
+            std::for_each(
+                venusModel->GetMeshes().begin(),
+                venusModel->GetMeshes().end(),
+                [](Mesh* mesh) { mesh->GetMaterial()->SetIndexOfRefraction(1.5f); });
             ScopedRefPtr<Camera> camera = new Camera(window);
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
             ScopedRefPtr<DirectionalLight> light = new DirectionalLight();
-            light->SetIntensity(0.5f);
+            light->SetIntensity(0.8f);
 
             ScopedRefPtr<PointLight> pointLight = new PointLight();
             pointLight->SetIntensity(30.0f);
             pointLight->SetPosition(glm::vec3(0.0f, 80.3f, -3.0f));
 
-            ScopedRefPtr<Object> object1 = new Object(helmet);
-            object1->SetTranslation(glm::vec3(-4.0f, 3.0f, 2.0f));
-            object1->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            object1->SetScale(glm::vec3(1.5f));
-            ScopedRefPtr<Object> object2 = new Object(venus);
-            object2->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
-            object2->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            object2->SetScale(glm::vec3(.5f));
-            ScopedRefPtr<Object> object3 = new Object(sphere);
-            object3->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
-            object3->SetScale(glm::vec3(1.0f));
-            ScopedRefPtr<Object> object4 = new Object(sponza);
-            object4->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            object4->SetScale(glm::vec3(0.03f));
+            ScopedRefPtr<Object> helmet = new Object(helmetModel);
+            helmet->SetTranslation(glm::vec3(-4.0f, 3.0f, 2.0f));
+            helmet->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            helmet->SetScale(glm::vec3(1.5f));
 
-            scene->AddObject(object1);
-            scene->AddObject(object2);
-            scene->AddObject(object3);
-            scene->AddObject(object4);
+            ScopedRefPtr<Object> venus = new Object(venusModel);
+            venus->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
+            venus->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            venus->SetScale(glm::vec3(.5f));
+
+            ScopedRefPtr<Object> sphere = new Object(sphereModel);
+            sphere->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
+            sphere->SetScale(glm::vec3(1.0f));
+
+            ScopedRefPtr<Object> sponza = new Object(sponzaModel);
+            sponza->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
+            sponza->SetScale(glm::vec3(0.03f));
+
+            scene->AddObject(helmet);
+            scene->AddObject(venus);
+            scene->AddObject(sphere);
+            scene->AddObject(sponza);
 
             scene->AddLight(light);
             scene->AddLight(pointLight);
