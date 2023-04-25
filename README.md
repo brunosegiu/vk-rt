@@ -19,7 +19,7 @@ For a long time I've wondered what a real-time Whitted-ish raytracer would look 
 ![2023-04-25 00-01-48(2)](https://user-images.githubusercontent.com/38514393/234165396-b171580d-1844-46bb-84a3-1634937bd21c.gif)
 
 ### - Runs on Steam Deck
-![dsf-2397](https://user-images.githubusercontent.com/38514393/234169169-53eda3c5-cf91-4029-b6e6-841ea41d2a55.gif)
+![20230425_010302~3](https://user-images.githubusercontent.com/38514393/234172314-765a4292-aa52-4aa0-b533-4de3101207f7.gif)
 
 ## References:
 - [Nvidia raytacing tutorial](https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/)
