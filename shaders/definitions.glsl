@@ -18,7 +18,7 @@ const float Bias = 0.01f;
 
 const float Pi = 3.14159265359f;
 
-const uint MaxRecursionLevel = 8;
+const uint MaxRecursionLevel = 4;
 
 struct MeshDescription {
     uint64_t vertexBufferAddress;
@@ -51,9 +51,5 @@ struct Material {
 
 struct RayPayload {
     vec3 color;
-    vec3 position;
-    vec3 normal;
-    float metallic;
-    float indexOfRefraction;
-    float metallicFalloff;
+    uint depth;
 };

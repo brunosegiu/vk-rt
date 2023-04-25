@@ -100,6 +100,10 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+float fresnelSchlick(float cosTheta, float r0) {
+    return r0 + (1.0 - r0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
     float a = roughness * roughness;
     float a2 = a * a;
@@ -150,7 +154,35 @@ float traceShadowRay(const vec3 origin, const vec3 direction, float distance) {
     return shadowAttenuation;
 }
 
+float fresnel(const vec3 I, const vec3 N, const float ior) {
+    float cosi = dot(I, N);
+    float etai = 1, etat = ior;
+    if (cosi > 0) {
+        float a = etai;
+        etai = etat;
+        etat = a;
+    }
+    // Compute sini using Snell's law
+    float sint = etai / etat * sqrt(max(0.f, 1 - cosi * cosi));
+    if (sint >= 1) {
+        return 1;
+    } else {
+        float cost = sqrt(max(0.f, 1 - sint * sint));
+        cosi = abs(cosi);
+        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+        return (Rs * Rs + Rp * Rp) / 2;
+    }
+}
+
 void main() {
+    if (rayPayload.depth > MaxRecursionLevel) {
+        rayPayload.color = vec3(0.0f);
+        return;
+    }
+
+    rayPayload.depth += 1;
+
     const Vertex vertex = unpackInstanceVertex(gl_InstanceCustomIndexEXT);
     const Material material = unpackInstanceMaterial(gl_InstanceCustomIndexEXT);
 
@@ -158,16 +190,18 @@ void main() {
     float roughness, metallic;
     getRoughnessAndMetallic(material, vertex.texCoord, roughness, metallic);
 
-    const vec3 rayOrigin = vertex.position;
-    const vec3 rayDirection = normalize(gl_WorldRayDirectionEXT);
+    const float indexOfRefraction = material.indexOfRefraction;
 
+    const vec3 rayOrigin = vertex.position;
+    const vec3 D = normalize(gl_WorldRayDirectionEXT);
     const vec3 N = vertex.normal;
-    const vec3 V = -rayDirection;
+    const vec3 V = -D;
 
     const vec3 f0 = mix(vec3(0.04), albedo, metallic);
     const vec3 diffuseColor = albedo * vec3(1.0f - f0) * (1.0f - metallic);
-    vec3 color = diffuseColor * AmbientTerm;
-    if (material.indexOfRefraction < 0.0f) {
+    vec3 color = vec3(0.0f);
+    if (indexOfRefraction < 0.0f) {
+        color += diffuseColor * AmbientTerm;
         for (uint lightIndex = 0; lightIndex < lightMetadata.lightCount; ++lightIndex) {
             Light light = lights.values[lightIndex];
             vec3 L;
@@ -203,10 +237,73 @@ void main() {
         }
     }
 
+    if (metallic > 0.0f) {
+        const vec3 reflectionOrigin = vertex.position;
+        const vec3 reflectionDirection = reflect(D, N);
+        traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT,
+            DefaultCullMask,
+            DefaultSBTOffset,
+            DefaultSBTStride,
+            ColorMissIndex,
+            reflectionOrigin,
+            TMin,
+            reflectionDirection,
+            TMax,
+            ColorPayloadIndex);
+        color += metallic * rayPayload.color;
+    } else if (indexOfRefraction > 0.0) {
+        const float nDotD = dot(N, D);
+        vec3 refrNormal;
+        float refrEta;
+        if (nDotD > 0.0f) {
+            refrNormal = -N;
+            refrEta = indexOfRefraction;
+        } else {
+            refrNormal = N;
+            refrEta = 1.0f / indexOfRefraction;
+        }
+        const vec3 refractionOrigin = vertex.position;
+        float fresnelTerm = fresnel(D, N, indexOfRefraction);
+        vec3 refractionColor = vec3(0.0f);
+        vec3 reflectionColor = vec3(0.0f);
+
+        if (nDotD < 0.0f && fresnelTerm > 0.0f) {
+            const vec3 reflectionDirection = reflect(D, N);
+            traceRayEXT(
+                topLevelAS,
+                gl_RayFlagsOpaqueEXT,
+                DefaultCullMask,
+                DefaultSBTOffset,
+                DefaultSBTStride,
+                ColorMissIndex,
+                refractionOrigin,
+                TMin,
+                reflectionDirection,
+                TMax,
+                ColorPayloadIndex);
+            reflectionColor = rayPayload.color;
+        }
+
+        if (fresnelTerm < 1.0f) {
+            const vec3 refractionDirection = refract(D, refrNormal, refrEta);
+            traceRayEXT(
+                topLevelAS,
+                gl_RayFlagsOpaqueEXT,
+                DefaultCullMask,
+                DefaultSBTOffset,
+                DefaultSBTStride,
+                ColorMissIndex,
+                refractionOrigin,
+                TMin,
+                refractionDirection,
+                TMax,
+                ColorPayloadIndex);
+            refractionColor = rayPayload.color;
+        }
+        color += mix(refractionColor, reflectionColor, fresnelTerm);
+    }
+
     rayPayload.color = color;
-    rayPayload.position = vertex.position;
-    rayPayload.normal = vertex.normal;
-    rayPayload.metallic = metallic;
-    rayPayload.indexOfRefraction = material.indexOfRefraction;
-    rayPayload.metallicFalloff = metallic * (1.0f - roughness) * (1.0f - roughness);
 }
