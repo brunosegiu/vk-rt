@@ -38,7 +38,7 @@ public:
     };
     SceneMaterials GetMaterialProxies();
 
-    void Commit();
+    void Update(vk::CommandBuffer& commandBuffer);
 
     ~Scene();
 
@@ -48,9 +48,9 @@ private:
     std::vector<ScopedRefPtr<Object>> mObjects;
     std::vector<ScopedRefPtr<Light>> mLights;
 
-    bool mCommitted;
     ScopedRefPtr<VulkanBuffer> mInstanceBuffer;
     ScopedRefPtr<VulkanBuffer> mTLASBuffer;
+    ScopedRefPtr<VulkanBuffer> mScratchBuffer;
     vk::AccelerationStructureKHR mTLAS;
     vk::DeviceAddress mTLASAddress;
 };

@@ -4,6 +4,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "DebugUtils.h"
+
 namespace VKRT {
 
 Object::Object(ScopedRefPtr<Model> model)
@@ -11,7 +13,9 @@ Object::Object(ScopedRefPtr<Model> model)
       mTransform(1.0f),
       mPosition(0.0f),
       mEulerRotation(0.0f),
-      mScale(1.0f, 1.0f, 1.0f) {}
+      mScale(1.0f, 1.0f, 1.0f) {
+    VKRT_ASSERT(model != nullptr);
+}
 
 void Object::SetTranslation(const glm::vec3& position) {
     mPosition = position;

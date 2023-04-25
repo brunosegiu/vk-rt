@@ -40,22 +40,74 @@ int main() {
                 Model::Load(context, userDir + "/assets/DamagedHelmet.glb");
             ScopedRefPtr<Model> sponzaModel =
                 Model::Load(context, userDir + "/assets/sponza_b.gltf");
-            ScopedRefPtr<Model> sphereModel = Model::Load(context, userDir + "/assets/sphere.gltf");
             ScopedRefPtr<Model> venusModel = Model::Load(context, userDir + "/assets/venus.gltf");
+            ScopedRefPtr<Model> deerModel = Model::Load(context, userDir + "/assets/deer.gltf");
+
+            std::vector<ScopedRefPtr<Model>> cubes{
+                Model::Load(context, userDir + "/assets/cube.gltf"),
+                Model::Load(context, userDir + "/assets/cube.gltf"),
+                Model::Load(context, userDir + "/assets/cube.gltf"),
+            };
+
+            std::vector<ScopedRefPtr<Model>> spheres{
+                Model::Load(context, userDir + "/assets/sphere.gltf"),
+                Model::Load(context, userDir + "/assets/sphere.gltf"),
+                Model::Load(context, userDir + "/assets/sphere.gltf"),
+            };
+
             std::for_each(
-                sphereModel->GetMeshes().begin(),
-                sphereModel->GetMeshes().end(),
+                venusModel->GetMeshes().begin(),
+                venusModel->GetMeshes().end(),
                 [](Mesh* mesh) {
                     mesh->GetMaterial()->SetMetallic(1.0f);
                     mesh->GetMaterial()->SetRoughness(0.0f);
                 });
+
             std::for_each(
-                venusModel->GetMeshes().begin(),
-                venusModel->GetMeshes().end(),
+                deerModel->GetMeshes().begin(),
+                deerModel->GetMeshes().end(),
                 [](Mesh* mesh) { mesh->GetMaterial()->SetIndexOfRefraction(1.5f); });
+
+            std::for_each(
+                cubes[0]->GetMeshes().begin(),
+                cubes[0]->GetMeshes().end(),
+                [](Mesh* mesh) {
+                    mesh->GetMaterial()->SetAlbedo(glm::vec3(0.0f, 0.0f, 1.0f));
+                    mesh->GetMaterial()->SetRoughness(0.5f);
+                });
+
+            std::for_each(
+                cubes[1]->GetMeshes().begin(),
+                cubes[1]->GetMeshes().end(),
+                [](Mesh* mesh) { mesh->GetMaterial()->SetMetallic(0.8f); });
+
+            std::for_each(
+                cubes[2]->GetMeshes().begin(),
+                cubes[2]->GetMeshes().end(),
+                [](Mesh* mesh) { mesh->GetMaterial()->SetIndexOfRefraction(1.3f); });
+
+            std::for_each(
+                spheres[0]->GetMeshes().begin(),
+                spheres[0]->GetMeshes().end(),
+                [](Mesh* mesh) {
+                    mesh->GetMaterial()->SetAlbedo(glm::vec3(0.2f, 0.6f, 0.3f));
+                    mesh->GetMaterial()->SetRoughness(0.8f);
+                });
+
+            std::for_each(
+                spheres[1]->GetMeshes().begin(),
+                spheres[1]->GetMeshes().end(),
+                [](Mesh* mesh) { mesh->GetMaterial()->SetMetallic(1.0f); });
+
+            std::for_each(
+                spheres[2]->GetMeshes().begin(),
+                spheres[2]->GetMeshes().end(),
+                [](Mesh* mesh) { mesh->GetMaterial()->SetIndexOfRefraction(1.8f); });
+
             ScopedRefPtr<Camera> camera = new Camera(window);
             camera->SetTranslation(glm::vec3(-2.0f, -4.0f, 0.0f));
             camera->SetRotation(glm::vec3(0.0f, 180.0f, 0.0f));
+
             ScopedRefPtr<DirectionalLight> light = new DirectionalLight();
             light->SetIntensity(0.8f);
 
@@ -68,40 +120,61 @@ int main() {
             helmet->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             helmet->SetScale(glm::vec3(1.5f));
 
-            ScopedRefPtr<Object> venus = new Object(venusModel);
-            venus->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
-            venus->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
-            venus->SetScale(glm::vec3(.5f));
+            ScopedRefPtr<Object> deer = new Object(deerModel);
+            deer->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
+            deer->SetScale(glm::vec3(.5f));
 
-            ScopedRefPtr<Object> sphere = new Object(sphereModel);
-            sphere->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
-            sphere->SetScale(glm::vec3(1.0f));
+            ScopedRefPtr<Object> venus = new Object(venusModel);
+            venus->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
+            venus->SetScale(glm::vec3(0.5f));
+            venus->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
 
             ScopedRefPtr<Object> sponza = new Object(sponzaModel);
             sponza->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             sponza->SetScale(glm::vec3(0.03f));
 
+            float offset = 0.0f;
+            for (const auto& cube : cubes) {
+                ScopedRefPtr<Object> cubeObject = new Object(cube);
+                cubeObject->SetTranslation(glm::vec3(-20.0f, 2.0f, 2.0f - offset));
+                cubeObject->SetScale(glm::vec3(0.3f));
+                cubeObject->Rotate(glm::vec3(0.0f, offset * 20, 0.0f));
+                scene->AddObject(cubeObject);
+                offset += 3.0f;
+            }
+
+            offset = 0.0f;
+            for (const auto& sphere : spheres) {
+                ScopedRefPtr<Object> object = new Object(sphere);
+                object->SetTranslation(glm::vec3(-20.0f, 4.0f, 2.0f - offset));
+                object->SetScale(glm::vec3(0.75f));
+                scene->AddObject(object);
+                offset += 3.0f;
+            }
+
             scene->AddObject(helmet);
             scene->AddObject(venus);
-            scene->AddObject(sphere);
+            scene->AddObject(deer);
             scene->AddObject(sponza);
 
             scene->AddLight(light);
             scene->AddLight(pointLight);
-
-            scene->Commit();
 
             ScopedRefPtr<Renderer> renderer = new Renderer(context, scene);
             Timer timer;
             double elapsedSeconds = 0.0;
             double totalSeconds = 0.0;
             while (window->Update()) {
-                light->SetDirection(glm::normalize(
-                    glm::vec3(0.2f * cos(totalSeconds), -1.0f, 0.2f * sin(totalSeconds))));
-                pointLight->SetPosition(glm::vec3(-35.0f, 3.0f, 5.5f * cos(totalSeconds)));
                 timer.Start();
-                camera->Update(elapsedSeconds);
-                renderer->Render(camera);
+                {
+                    light->SetDirection(glm::normalize(
+                        glm::vec3(0.2f * cos(totalSeconds), -1.0f, 0.2f * sin(totalSeconds))));
+                    pointLight->SetPosition(glm::vec3(-35.0f, 3.0f, 5.5f * cos(totalSeconds)));
+                    venus->Rotate(glm::vec3(0.0f, 0.0f, elapsedSeconds * 30.0f));
+                    deer->SetTranslation(glm::vec3(4.0f, 3.0f, 2.0f * cos(totalSeconds)));
+                    camera->Update(elapsedSeconds);
+                    renderer->Render(camera);
+                }
                 elapsedSeconds = timer.ElapsedSeconds();
                 totalSeconds += elapsedSeconds;
             }

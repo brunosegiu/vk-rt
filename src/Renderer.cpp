@@ -6,12 +6,10 @@
 namespace VKRT {
 Renderer::Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene)
     : mContext(context), mScene(scene) {
-    Scene::SceneMaterials materials = mScene->GetMaterialProxies();
     mPipeline = new RayTracingPipeline(mContext);
     CreateStorageImage();
     CreateUniformBuffer();
-    CreateMaterialUniforms(materials);
-    CreateDescriptors(materials);
+    CreateMaterialUniforms();
 }
 
 void Renderer::CreateStorageImage() {
@@ -110,7 +108,7 @@ void Renderer::CreateUniformBuffer() {
     }
 }
 
-void Renderer::CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo) {
+void Renderer::CreateMaterialUniforms() {
     {
         vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
         const float anisotropy =
@@ -130,21 +128,6 @@ void Renderer::CreateMaterialUniforms(const Scene::SceneMaterials& materialInfo)
                 .setAnisotropyEnable(true)
                 .setMaxAnisotropy(anisotropy);
         mTextureSampler = VKRT_ASSERT_VK(logicalDevice.createSampler(samplerCreateInfo));
-    }
-
-    {
-        const size_t materialBufferSize =
-            sizeof(Scene::MaterialProxy) * materialInfo.materials.size();
-        mMaterialsBuffer = mContext->GetDevice()->CreateBuffer(
-            materialBufferSize,
-            vk::BufferUsageFlagBits::eStorageBuffer,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-        uint8_t* buffer = mMaterialsBuffer->MapBuffer();
-        std::copy_n(
-            reinterpret_cast<const uint8_t*>(materialInfo.materials.data()),
-            materialBufferSize,
-            buffer);
-        mMaterialsBuffer->UnmapBuffer();
     }
 }
 
@@ -208,6 +191,27 @@ void Renderer::UpdateLightUniforms() {
     }
 }
 
+void Renderer::UpdateMaterialUniforms(const Scene::SceneMaterials& materialInfo) {
+    {
+        const size_t materialBufferSize =
+            sizeof(Scene::MaterialProxy) * materialInfo.materials.size();
+        if (mMaterialsBuffer == nullptr ||
+            materialBufferSize != mMaterialsBuffer->GetBufferSize()) {
+            mMaterialsBuffer = mContext->GetDevice()->CreateBuffer(
+                materialBufferSize,
+                vk::BufferUsageFlagBits::eStorageBuffer,
+                vk::MemoryPropertyFlagBits::eHostVisible |
+                    vk::MemoryPropertyFlagBits::eHostCoherent);
+        }
+        uint8_t* buffer = mMaterialsBuffer->MapBuffer();
+        std::copy_n(
+            reinterpret_cast<const uint8_t*>(materialInfo.materials.data()),
+            materialBufferSize,
+            buffer);
+        mMaterialsBuffer->UnmapBuffer();
+    }
+}
+
 void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
@@ -229,6 +233,10 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
                                         descriptorAllocateInfo,
                                         mContext->GetDevice()->GetDispatcher()))
                          .front();
+}
+
+void Renderer::UpdateDescriptors(const Scene::SceneMaterials& materialInfo) {
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
     vk::WriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo =
         vk::WriteDescriptorSetAccelerationStructureKHR().setAccelerationStructures(
@@ -331,15 +339,20 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
 }
 
 void Renderer::Render(Camera* camera) {
-    UpdateCameraUniforms(camera);
-    UpdateLightUniforms();
-
     mContext->GetSwapchain()->AcquireNextImage();
-
     vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
-
     {
         VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
+
+        mScene->Update(commandBuffer);
+        Scene::SceneMaterials materials = mScene->GetMaterialProxies();
+        UpdateMaterialUniforms(materials);
+        UpdateCameraUniforms(camera);
+        UpdateLightUniforms();
+        if (!mDescriptorSet) {
+            CreateDescriptors(materials);
+        }
+        UpdateDescriptors(materials);
 
         commandBuffer.bindPipeline(
             vk::PipelineBindPoint::eRayTracingKHR,

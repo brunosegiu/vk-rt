@@ -2,17 +2,14 @@
 
 #include "DebugUtils.h"
 
+#undef MemoryBarrier
+
 namespace VKRT {
 
 Scene::Scene(ScopedRefPtr<Context> context)
-    : mContext(context),
-      mObjects(),
-      mInstanceBuffer(nullptr),
-      mTLASBuffer(nullptr),
-      mCommitted(false) {}
+    : mContext(context), mObjects(), mInstanceBuffer(nullptr), mTLASBuffer(nullptr) {}
 
 void Scene::AddObject(ScopedRefPtr<Object> object) {
-    VKRT_ASSERT(!mCommitted);
     if (object != nullptr) {
         mObjects.emplace_back(object);
     }
@@ -118,10 +115,9 @@ Scene::SceneMaterials Scene::GetMaterialProxies() {
     return sceneMaterials;
 }
 
-void Scene::Commit() {
-    VKRT_ASSERT(!mCommitted);
-    if (!mObjects.empty() && !mCommitted) {
-        mCommitted = true;
+void Scene::Update(vk::CommandBuffer& commandBuffer) {
+    bool isUpdate = mTLAS;
+    if (!mObjects.empty()) {
         std::vector<vk::AccelerationStructureInstanceKHR> instances;
         uint32_t index = 0;
         for (const Object* object : mObjects) {
@@ -166,7 +162,12 @@ void Scene::Commit() {
         vk::AccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo =
             vk::AccelerationStructureBuildGeometryInfoKHR()
                 .setType(vk::AccelerationStructureTypeKHR::eTopLevel)
-                .setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace)
+                .setFlags(
+                    vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace |
+                    vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate)
+                .setMode(
+                    isUpdate ? vk::BuildAccelerationStructureModeKHR::eUpdate
+                             : vk::BuildAccelerationStructureModeKHR::eBuild)
                 .setGeometries(accelerationStructureGeometry);
 
         uint32_t instanceCount = static_cast<uint32_t>(instances.size());
@@ -178,24 +179,26 @@ void Scene::Commit() {
                 instanceCount,
                 mContext->GetDevice()->GetDispatcher());
 
-        mTLASBuffer = mContext->GetDevice()->CreateBuffer(
-            buildSizesInfo.accelerationStructureSize,
-            vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
-                vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            vk::MemoryPropertyFlagBits::eDeviceLocal,
-            vk::MemoryAllocateFlagBits::eDeviceAddress);
+        if (!isUpdate) {
+            mTLASBuffer = mContext->GetDevice()->CreateBuffer(
+                buildSizesInfo.accelerationStructureSize,
+                vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+                    vk::BufferUsageFlagBits::eShaderDeviceAddress,
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                vk::MemoryAllocateFlagBits::eDeviceAddress);
 
-        vk::AccelerationStructureCreateInfoKHR accelerationStructureCreateInfo =
-            vk::AccelerationStructureCreateInfoKHR()
-                .setBuffer(mTLASBuffer->GetBufferHandle())
-                .setSize(buildSizesInfo.accelerationStructureSize)
-                .setType(vk::AccelerationStructureTypeKHR::eTopLevel);
-        mTLAS = VKRT_ASSERT_VK(logicalDevice.createAccelerationStructureKHR(
-            accelerationStructureCreateInfo,
-            nullptr,
-            mContext->GetDevice()->GetDispatcher()));
+            vk::AccelerationStructureCreateInfoKHR accelerationStructureCreateInfo =
+                vk::AccelerationStructureCreateInfoKHR()
+                    .setBuffer(mTLASBuffer->GetBufferHandle())
+                    .setSize(buildSizesInfo.accelerationStructureSize)
+                    .setType(vk::AccelerationStructureTypeKHR::eTopLevel);
+            mTLAS = VKRT_ASSERT_VK(logicalDevice.createAccelerationStructureKHR(
+                accelerationStructureCreateInfo,
+                nullptr,
+                mContext->GetDevice()->GetDispatcher()));
+        }
 
-        ScopedRefPtr<VulkanBuffer> scratchBuffer = mContext->GetDevice()->CreateBuffer(
+        mScratchBuffer = mContext->GetDevice()->CreateBuffer(
             buildSizesInfo.buildScratchSize,
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
             vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -208,7 +211,8 @@ void Scene::Commit() {
                 .setMode(vk::BuildAccelerationStructureModeKHR::eBuild)
                 .setDstAccelerationStructure(mTLAS)
                 .setGeometries(accelerationStructureGeometry)
-                .setScratchData(scratchBuffer->GetDeviceAddress());
+                .setScratchData(mScratchBuffer->GetDeviceAddress())
+                .setSrcAccelerationStructure(isUpdate ? mTLAS : nullptr);
 
         vk::AccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo =
             vk::AccelerationStructureBuildRangeInfoKHR()
@@ -216,27 +220,38 @@ void Scene::Commit() {
                 .setPrimitiveOffset(0)
                 .setFirstVertex(0)
                 .setTransformOffset(0);
-        vk::CommandBuffer commandBuffer = mContext->GetDevice()->CreateCommandBuffer();
-        VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
+
         commandBuffer.buildAccelerationStructuresKHR(
             accelerationBuildGeometryInfo,
             &accelerationStructureBuildRangeInfo,
             mContext->GetDevice()->GetDispatcher());
-        VKRT_ASSERT_VK(commandBuffer.end());
-        mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
-        mContext->GetDevice()->DestroyCommand(commandBuffer);
 
-        vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo =
-            vk::AccelerationStructureDeviceAddressInfoKHR().setAccelerationStructure(mTLAS);
-        mTLASAddress = logicalDevice.getAccelerationStructureAddressKHR(
-            accelerationDeviceAddressInfo,
-            mContext->GetDevice()->GetDispatcher());
+        vk::MemoryBarrier barrier =
+            vk::MemoryBarrier()
+                .setSrcAccessMask(vk::AccessFlagBits::eAccelerationStructureWriteKHR)
+                .setDstAccessMask(vk::AccessFlagBits::eAccelerationStructureReadKHR);
+
+        commandBuffer.pipelineBarrier(
+            vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
+            vk::PipelineStageFlagBits::eRayTracingShaderKHR,
+            {},
+            barrier,
+            {},
+            {});
+
+        if (!isUpdate) {
+            vk::AccelerationStructureDeviceAddressInfoKHR accelerationDeviceAddressInfo =
+                vk::AccelerationStructureDeviceAddressInfoKHR().setAccelerationStructure(mTLAS);
+            mTLASAddress = logicalDevice.getAccelerationStructureAddressKHR(
+                accelerationDeviceAddressInfo,
+                mContext->GetDevice()->GetDispatcher());
+        }
     }
 }
 
 Scene::~Scene() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-    if (mCommitted) {
+    if (mTLAS) {
         logicalDevice.destroyAccelerationStructureKHR(
             mTLAS,
             nullptr,
