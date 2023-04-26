@@ -8,7 +8,6 @@ const int ShadowMissIndex = 1;
 
 const float TMin = 0.001f;
 const float TMax = 1000.0f;
-const uint DefaultCullMask = 0xFF;
 const uint DefaultSBTOffset = 0;
 const uint DefaultSBTStride = 0;
 
@@ -19,6 +18,10 @@ const float Bias = 0.01f;
 const float Pi = 3.14159265359f;
 
 const uint MaxRecursionLevel = 4;
+
+const uint OpaqueMask = 0xF0;
+const uint RefractiveMask = 0x0F;
+const uint AllMask = OpaqueMask | RefractiveMask;
 
 struct MeshDescription {
     uint64_t vertexBufferAddress;

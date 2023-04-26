@@ -142,7 +142,7 @@ float traceShadowRay(const vec3 origin, const vec3 direction, float distance) {
         topLevelAS,
         gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT |
             gl_RayFlagsSkipClosestHitShaderEXT,
-        DefaultCullMask,
+        OpaqueMask,
         DefaultSBTOffset,
         DefaultSBTStride,
         ShadowMissIndex,
@@ -243,7 +243,7 @@ void main() {
         traceRayEXT(
             topLevelAS,
             gl_RayFlagsOpaqueEXT,
-            DefaultCullMask,
+            AllMask,
             DefaultSBTOffset,
             DefaultSBTStride,
             ColorMissIndex,
@@ -274,7 +274,7 @@ void main() {
             traceRayEXT(
                 topLevelAS,
                 gl_RayFlagsOpaqueEXT,
-                DefaultCullMask,
+                AllMask,
                 DefaultSBTOffset,
                 DefaultSBTStride,
                 ColorMissIndex,
@@ -291,7 +291,7 @@ void main() {
             traceRayEXT(
                 topLevelAS,
                 gl_RayFlagsOpaqueEXT,
-                DefaultCullMask,
+                AllMask,
                 DefaultSBTOffset,
                 DefaultSBTStride,
                 ColorMissIndex,

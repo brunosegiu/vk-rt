@@ -38,7 +38,7 @@ void main() {
     traceRayEXT(
         topLevelAS,
         gl_RayFlagsOpaqueEXT,
-        DefaultCullMask,
+        AllMask,
         DefaultSBTOffset,
         DefaultSBTStride,
         ColorMissIndex,

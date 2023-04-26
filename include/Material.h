@@ -12,6 +12,10 @@ class Device;
 
 class Material : public RefCountPtr {
 public:
+    static constexpr uint32_t OpaqueMask = 0xF0;
+    static constexpr uint32_t RefractiveMask = 0x0F;
+    static constexpr uint32_t AllMask = OpaqueMask | RefractiveMask;
+
     Material();
 
     Material(

@@ -125,12 +125,13 @@ void Scene::Update(vk::CommandBuffer& commandBuffer) {
             VkTransformMatrixKHR transformMatrix =
                 *(reinterpret_cast<const VkTransformMatrixKHR*>(&transform));
             for (const Mesh* mesh : object->GetModel()->GetMeshes()) {
+                const bool isRefractive = mesh->GetMaterial()->GetIndexOfRefraction() > 0.0f;
                 instances.emplace_back(
                     vk::AccelerationStructureInstanceKHR()
                         .setTransform(transformMatrix)
                         .setInstanceCustomIndex(index)
                         .setAccelerationStructureReference(mesh->GetBLASAddress())
-                        .setMask(0xFF)
+                        .setMask(isRefractive ? Material::RefractiveMask : Material::OpaqueMask)
                         .setInstanceShaderBindingTableRecordOffset(0)
                         .setFlags(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable));
                 ++index;
