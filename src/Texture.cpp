@@ -5,6 +5,65 @@
 #include "VulkanBuffer.h"
 
 namespace VKRT {
+
+Texture::Texture(
+    ScopedRefPtr<Context> context,
+    uint32_t width,
+    uint32_t height,
+    uint32_t layers,
+    vk::Format format,
+    vk::ImageUsageFlags usageFlags,
+    vk::Image image)
+    : mContext(context), mImage(image), ownsImage(true) {
+    ownsImage = !image;
+
+    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+
+    if (ownsImage) {
+        vk::ImageCreateInfo imageCreateInfo = vk::ImageCreateInfo()
+                                                  .setImageType(vk::ImageType::e2D)
+                                                  .setFormat(format)
+                                                  .setExtent(vk::Extent3D{width, height, 1})
+                                                  .setMipLevels(1)
+                                                  .setArrayLayers(layers)
+                                                  .setSamples(vk::SampleCountFlagBits::e1)
+                                                  .setTiling(vk::ImageTiling::eOptimal)
+                                                  .setUsage(usageFlags)
+                                                  .setInitialLayout(vk::ImageLayout::eUndefined);
+
+        mImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
+
+        vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mImage);
+        mMemory = mContext->GetDevice()->AllocateMemory(
+            vk::MemoryPropertyFlagBits::eDeviceLocal,
+            imageMemReq);
+        VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mImage, mMemory, 0));
+    }
+
+    vk::ImageViewCreateInfo imageViewCreateInfo =
+        vk::ImageViewCreateInfo()
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(format)
+            .setSubresourceRange(vk::ImageSubresourceRange()
+                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                     .setBaseMipLevel(0)
+                                     .setLevelCount(1)
+                                     .setBaseArrayLayer(0)
+                                     .setLayerCount(1))
+            .setImage(mImage);
+
+    mImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
+}
+
+Texture::Texture(
+    ScopedRefPtr<Context> context,
+    uint32_t width,
+    uint32_t height,
+    vk::Format format,
+    vk::ImageUsageFlags usageFlags,
+    vk::Image image)
+    : Texture(context, width, height, 1, format, usageFlags, image) {}
+
 Texture::Texture(
     ScopedRefPtr<Context> context,
     uint32_t width,
@@ -63,54 +122,6 @@ Texture::Texture(
     VKRT_ASSERT_VK(commandBuffer.end());
     mContext->GetDevice()->SubmitCommandAndFlush(commandBuffer);
     mContext->GetDevice()->DestroyCommand(commandBuffer);
-}
-
-Texture::Texture(
-    ScopedRefPtr<Context> context,
-    uint32_t width,
-    uint32_t height,
-    vk::Format format,
-    vk::ImageUsageFlags usageFlags,
-    vk::Image image)
-    : mContext(context), mImage(image), ownsImage(true) {
-    ownsImage = !image;
-
-    vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
-
-    if (ownsImage) {
-        vk::ImageCreateInfo imageCreateInfo = vk::ImageCreateInfo()
-                                                  .setImageType(vk::ImageType::e2D)
-                                                  .setFormat(format)
-                                                  .setExtent(vk::Extent3D{width, height, 1})
-                                                  .setMipLevels(1)
-                                                  .setArrayLayers(1)
-                                                  .setSamples(vk::SampleCountFlagBits::e1)
-                                                  .setTiling(vk::ImageTiling::eOptimal)
-                                                  .setUsage(usageFlags)
-                                                  .setInitialLayout(vk::ImageLayout::eUndefined);
-
-        mImage = VKRT_ASSERT_VK(logicalDevice.createImage(imageCreateInfo));
-
-        vk::MemoryRequirements imageMemReq = logicalDevice.getImageMemoryRequirements(mImage);
-        mMemory = mContext->GetDevice()->AllocateMemory(
-            vk::MemoryPropertyFlagBits::eDeviceLocal,
-            imageMemReq);
-        VKRT_ASSERT_VK(logicalDevice.bindImageMemory(mImage, mMemory, 0));
-    }
-
-    vk::ImageViewCreateInfo imageViewCreateInfo =
-        vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
-            .setSubresourceRange(vk::ImageSubresourceRange()
-                                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                     .setBaseMipLevel(0)
-                                     .setLevelCount(1)
-                                     .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
-            .setImage(mImage);
-
-    mImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
 }
 
 void Texture::SetImageLayout(

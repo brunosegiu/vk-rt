@@ -79,7 +79,10 @@ int main() {
             std::for_each(
                 cubes[1]->GetMeshes().begin(),
                 cubes[1]->GetMeshes().end(),
-                [](Mesh* mesh) { mesh->GetMaterial()->SetMetallic(0.8f); });
+                [](Mesh* mesh) {
+                    mesh->GetMaterial()->SetMetallic(0.8f);
+                    mesh->GetMaterial()->SetRoughness(0.0f);
+                });
 
             std::for_each(
                 cubes[2]->GetMeshes().begin(),
@@ -97,7 +100,10 @@ int main() {
             std::for_each(
                 spheres[1]->GetMeshes().begin(),
                 spheres[1]->GetMeshes().end(),
-                [](Mesh* mesh) { mesh->GetMaterial()->SetMetallic(1.0f); });
+                [](Mesh* mesh) {
+                    mesh->GetMaterial()->SetMetallic(1.0f);
+                    mesh->GetMaterial()->SetRoughness(0.0f);
+                });
 
             std::for_each(
                 spheres[2]->GetMeshes().begin(),
@@ -116,13 +122,13 @@ int main() {
             pointLight->SetPosition(glm::vec3(0.0f, 80.3f, -3.0f));
 
             ScopedRefPtr<Object> helmet = new Object(helmetModel);
-            helmet->SetTranslation(glm::vec3(-4.0f, 3.0f, 2.0f));
+            helmet->SetTranslation(glm::vec3(4.0f, 3.0f, 0.0f));
             helmet->Rotate(glm::vec3(90.0f, 0.0f, 0.0f));
             helmet->SetScale(glm::vec3(1.5f));
 
             ScopedRefPtr<Object> deer = new Object(deerModel);
-            deer->SetTranslation(glm::vec3(4.0f, 3.0f, -2.0f));
-            deer->SetScale(glm::vec3(.5f));
+            deer->SetTranslation(glm::vec3(-4.0f, 3.0f, 0.0f));
+            deer->SetScale(glm::vec3(.7f));
 
             ScopedRefPtr<Object> venus = new Object(venusModel);
             venus->SetTranslation(glm::vec3(0.0f, 3.0f, 0.0f));
@@ -167,10 +173,12 @@ int main() {
             while (window->Update()) {
                 timer.Start();
                 {
-                    light->SetDirection(glm::normalize(
-                        glm::vec3(0.2f * cos(totalSeconds), -1.0f, 0.2f * sin(totalSeconds))));
+                    light->SetDirection(
+                        glm::normalize(glm::vec3(0.2f, -1.0f, 0.2 * cos(totalSeconds / 2.0f))));
                     pointLight->SetPosition(glm::vec3(-35.0f, 3.0f, 5.5f * cos(totalSeconds)));
-                    venus->Rotate(glm::vec3(0.0f, 0.0f, elapsedSeconds * 30.0f));
+                    helmet->Rotate(glm::vec3(0.0f, elapsedSeconds * 30.0f, 0.0f));
+                    venus->Rotate(glm::vec3(0.0f, elapsedSeconds * 30.0f, 0.0f));
+                    deer->Rotate(glm::vec3(0.0f, elapsedSeconds * 30.0f, 0.0f));
                     deer->SetTranslation(glm::vec3(4.0f, 3.0f, 2.0f * cos(totalSeconds)));
                     camera->Update(elapsedSeconds);
                     renderer->Render(camera);

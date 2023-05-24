@@ -155,23 +155,27 @@ float traceShadowRay(const vec3 origin, const vec3 direction, float distance) {
 }
 
 float fresnel(const vec3 I, const vec3 N, const float ior) {
-    float cosi = dot(I, N);
-    float etai = 1, etat = ior;
-    if (cosi > 0) {
-        float a = etai;
-        etai = etat;
-        etat = a;
-    }
-    // Compute sini using Snell's law
-    float sint = etai / etat * sqrt(max(0.f, 1 - cosi * cosi));
-    if (sint >= 1) {
-        return 1;
+    float cosIncident = dot(I, N);
+    float etaIncident;
+    float etaTrans;
+    if (cosIncident > 0.0f) {
+        etaIncident = ior;
+        etaTrans = 1.0f;
     } else {
-        float cost = sqrt(max(0.f, 1 - sint * sint));
-        cosi = abs(cosi);
-        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
-        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-        return (Rs * Rs + Rp * Rp) / 2;
+        etaIncident = 1.0f;
+        etaTrans = ior;
+    }
+    float sinTrans = etaIncident / etaTrans * sqrt(max(0.f, 1 - cosIncident * cosIncident));
+    if (sinTrans >= 1.0f) {
+        return 1.0f;
+    } else {
+        const float cosTrans = sqrt(max(0.f, 1.0f - sinTrans * sinTrans));
+        cosIncident = abs(cosIncident);
+        float rS = ((etaTrans * cosIncident) - (etaIncident * cosTrans)) /
+                   ((etaTrans * cosIncident) + (etaIncident * cosTrans));
+        float rP = ((etaIncident * cosIncident) - (etaTrans * cosTrans)) /
+                   ((etaIncident * cosIncident) + (etaTrans * cosTrans));
+        return (rS * rS + rP * rP) / 2.0f;
     }
 }
 
@@ -252,7 +256,7 @@ void main() {
             reflectionDirection,
             TMax,
             ColorPayloadIndex);
-        color += metallic * rayPayload.color;
+        color += metallic * (1.0f - roughness) * (1.0f - roughness) * rayPayload.color;
     } else if (indexOfRefraction > 0.0) {
         const float nDotD = dot(N, D);
         vec3 refrNormal;

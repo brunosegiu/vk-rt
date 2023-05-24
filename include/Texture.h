@@ -13,6 +13,15 @@ public:
         ScopedRefPtr<Context> context,
         uint32_t width,
         uint32_t height,
+        uint32_t layers,
+        vk::Format format,
+        vk::ImageUsageFlags usageFlags,
+        vk::Image image = nullptr);
+
+    Texture(
+        ScopedRefPtr<Context> context,
+        uint32_t width,
+        uint32_t height,
         vk::Format format,
         vk::ImageUsageFlags usageFlags,
         vk::Image image = nullptr);

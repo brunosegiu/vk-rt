@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 #include "DebugUtils.h"
 
@@ -43,14 +43,13 @@ void Object::SetScale(const glm::vec3& scale) {
 }
 
 void Object::UpdateTransform() {
-    mTransform = glm::translate(glm::mat4(1.0f), mPosition);
-    mTransform =
-        glm::rotate(mTransform, glm::radians(mEulerRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-    mTransform =
-        glm::rotate(mTransform, glm::radians(mEulerRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-    mTransform =
-        glm::rotate(mTransform, glm::radians(mEulerRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-    mTransform = glm::scale(mTransform, mScale);
+    glm::mat4 translate = glm::translate(glm::mat4(1.0f), mPosition);
+    glm::mat4 rotate = glm::eulerAngleYXZ(
+        glm::radians(mEulerRotation.y),
+        glm::radians(mEulerRotation.x),
+        glm::radians(mEulerRotation.z));
+    glm::mat4 scale = glm::scale(glm::mat4(1.0f), mScale);
+    mTransform = translate * rotate * scale;
 }
 
 Object::~Object() {}
