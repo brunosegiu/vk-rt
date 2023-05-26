@@ -2,7 +2,7 @@
 
 #include "Camera.h"
 #include "Context.h"
-#include "RayTracingPipeline.h"
+#include "Pipeline.h"
 #include "RefCountPtr.h"
 #include "Scene.h"
 
@@ -41,7 +41,7 @@ private:
     ScopedRefPtr<VulkanBuffer> mLightUniformBuffer;
     ScopedRefPtr<VulkanBuffer> mMaterialsBuffer;
 
-    ScopedRefPtr<RayTracingPipeline> mPipeline;
+    ScopedRefPtr<Pipeline> mMainPassPipeline;
     vk::DescriptorPool mDescriptorPool;
     vk::DescriptorSet mDescriptorSet;
 

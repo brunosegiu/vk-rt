@@ -25,7 +25,6 @@ set(HEADERS
     include/Window.h
     include/Context.h
     include/Swapchain.h
-    include/RayTracingPipeline.h
     include/Scene.h
     include/Model.h
     include/Object.h
@@ -36,6 +35,8 @@ set(HEADERS
     include/Texture.h
     include/Material.h
     include/Mesh.h
+    include/ProbeGrid.h
+    include/Pipeline.h
 )
 
 set(SOURCE
@@ -48,7 +49,6 @@ set(SOURCE
     src/Window.cpp
     src/Context.cpp
     src/Swapchain.cpp
-    src/RayTracingPipeline.cpp
     src/Scene.cpp
     src/Model.cpp
     src/Object.cpp
@@ -59,6 +59,8 @@ set(SOURCE
     src/Texture.cpp
     src/Material.cpp
     src/Mesh.cpp
+    src/ProbeGrid.cpp
+    src/Pipeline.cpp
 )
 
 set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")

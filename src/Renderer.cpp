@@ -6,7 +6,50 @@
 namespace VKRT {
 Renderer::Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene)
     : mContext(context), mScene(scene) {
-    mPipeline = new RayTracingPipeline(mContext);
+    constexpr uint32_t MaxBoundTextures = 64;
+
+    std::vector<Pipeline::Descriptor> descriptors{
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eAccelerationStructureKHR,
+            .stageFlags =
+                vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eStorageImage,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eUniformBuffer,
+            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eStorageBuffer,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eUniformBuffer,
+            .stageFlags =
+                vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eStorageBuffer,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eSampler,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eStorageBuffer,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+        Pipeline::Descriptor{
+            .type = vk::DescriptorType::eSampledImage,
+            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR,
+            .count = MaxBoundTextures,
+            .variableCount = true},
+    };
+
+    std::unordered_map<RayTracingStage, Resource::Id> stages{
+        {RayTracingStage::Generate, Resource::Id::GenShader},
+        {RayTracingStage::Hit, Resource::Id::HitShader},
+        {RayTracingStage::Miss, Resource::Id::MissShader},
+        {RayTracingStage::ShadowMiss, Resource::Id::ShadowMissShader},
+    };
+
+    mMainPassPipeline = new Pipeline(context, descriptors, stages);
     CreateStorageImage();
     CreateUniformBuffer();
     CreateMaterialUniforms();
@@ -216,7 +259,9 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
 
     vk::DescriptorPoolCreateInfo poolCreateInfo =
-        vk::DescriptorPoolCreateInfo().setPoolSizes(mPipeline->GetDescriptorSizes()).setMaxSets(1);
+        vk::DescriptorPoolCreateInfo()
+            .setPoolSizes(mMainPassPipeline->GetDescriptorSizes())
+            .setMaxSets(1);
     mDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
 
     std::vector<uint32_t> descriptorCounts{static_cast<uint32_t>(materialInfo.textures.size())};
@@ -227,7 +272,7 @@ void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
     vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
         vk::DescriptorSetAllocateInfo()
             .setDescriptorPool(mDescriptorPool)
-            .setSetLayouts(mPipeline->GetDescriptorLayout())
+            .setSetLayouts(mMainPassPipeline->GetDescriptorLayout())
             .setPNext(&dynamicCountInfo);
     mDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(
                                         descriptorAllocateInfo,
@@ -356,16 +401,16 @@ void Renderer::Render(Camera* camera) {
 
         commandBuffer.bindPipeline(
             vk::PipelineBindPoint::eRayTracingKHR,
-            mPipeline->GetPipelineHandle());
+            mMainPassPipeline->GetPipelineHandle());
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eRayTracingKHR,
-            mPipeline->GetPipelineLayout(),
+            mMainPassPipeline->GetPipelineLayout(),
             0,
             mDescriptorSet,
             nullptr);
 
         const vk::Extent2D& imageSize = mContext->GetSwapchain()->GetExtent();
-        const RayTracingPipeline::RayTracingTablesRef& tableRef = mPipeline->GetTablesRef();
+        const Pipeline::RayTracingTablesRef& tableRef = mMainPassPipeline->GetTablesRef();
         commandBuffer.traceRaysKHR(
             tableRef.rayGen,
             tableRef.rayMiss,

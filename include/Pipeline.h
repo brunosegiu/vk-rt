@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include "Macros.h"
@@ -13,9 +14,20 @@ namespace VKRT {
 
 class Context;
 
-class RayTracingPipeline : public RefCountPtr {
+enum class RayTracingStage { Generate = 0, Hit, Miss, ShadowMiss };
+
+class Pipeline : public RefCountPtr {
 public:
-    RayTracingPipeline(ScopedRefPtr<Context> context);
+    struct Descriptor {
+        vk::DescriptorType type;
+        vk::ShaderStageFlags stageFlags;
+        uint32_t count = 1;
+        bool variableCount = false;
+    };
+    Pipeline(
+        ScopedRefPtr<Context> context,
+        const std::vector<Descriptor>& descriptors,
+        const std::unordered_map<RayTracingStage, Resource::Id>& shaderResourcesMap);
 
     const std::vector<vk::DescriptorPoolSize>& GetDescriptorSizes() const;
     const vk::DescriptorSetLayout& GetDescriptorLayout() const { return mDescriptorLayout; }
@@ -27,7 +39,7 @@ public:
     };
     const RayTracingTablesRef& GetTablesRef() const { return mTableRef; }
 
-    ~RayTracingPipeline();
+    ~Pipeline();
 
 private:
     vk::ShaderModule LoadShader(Resource::Id shaderId);
@@ -37,7 +49,7 @@ private:
     std::vector<vk::DescriptorPoolSize> mDescriptorSizes;
     vk::PipelineLayout mLayout;
     vk::Pipeline mPipeline;
-    std::vector<vk::ShaderModule> mShaders;
+    std::unordered_map<RayTracingStage, vk::ShaderModule> mShaders;
 
     size_t mHandleSize, mHandleSizeAligned;
     ScopedRefPtr<VulkanBuffer> mRayGenTable;
