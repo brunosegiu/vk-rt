@@ -67,6 +67,8 @@ set(SHADER_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
 set(SHADER_HEADERS 
     definitions.glsl
+    proceduralSky.glsl
+    equirectangularProjection.glsl
 )
 
 set(SHADERS
@@ -74,6 +76,7 @@ set(SHADERS
     raytrace.rchit
     raytrace.rmiss
     raytraceShadow.rmiss
+    raytraceProbe.rgen
 )
 
 if(WIN32)

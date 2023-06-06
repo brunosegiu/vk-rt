@@ -7,49 +7,98 @@ namespace VKRT {
 Renderer::Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene)
     : mContext(context), mScene(scene) {
     constexpr uint32_t MaxBoundTextures = 64;
+    {
+        std::vector<Pipeline::Descriptor> descriptors{
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eAccelerationStructureKHR,
+                .stageFlags =
+                    vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageImage,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eUniformBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eUniformBuffer,
+                .stageFlags =
+                    vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eSampler,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eSampledImage,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR,
+                .count = MaxBoundTextures,
+                .variableCount = true},
+        };
 
-    std::vector<Pipeline::Descriptor> descriptors{
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eAccelerationStructureKHR,
-            .stageFlags =
-                vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eStorageImage,
-            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eUniformBuffer,
-            .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eStorageBuffer,
-            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eUniformBuffer,
-            .stageFlags =
-                vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eStorageBuffer,
-            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eSampler,
-            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eStorageBuffer,
-            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
-        Pipeline::Descriptor{
-            .type = vk::DescriptorType::eSampledImage,
-            .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR,
-            .count = MaxBoundTextures,
-            .variableCount = true},
-    };
+        std::unordered_map<RayTracingStage, Resource::Id> stages{
+            {RayTracingStage::Generate, Resource::Id::GenShader},
+            {RayTracingStage::Hit, Resource::Id::HitShader},
+            {RayTracingStage::Miss, Resource::Id::MissShader},
+            {RayTracingStage::ShadowMiss, Resource::Id::ShadowMissShader},
+        };
 
-    std::unordered_map<RayTracingStage, Resource::Id> stages{
-        {RayTracingStage::Generate, Resource::Id::GenShader},
-        {RayTracingStage::Hit, Resource::Id::HitShader},
-        {RayTracingStage::Miss, Resource::Id::MissShader},
-        {RayTracingStage::ShadowMiss, Resource::Id::ShadowMissShader},
-    };
+        mMainPassPipeline = new Pipeline(context, descriptors, stages);
+    }
 
-    mMainPassPipeline = new Pipeline(context, descriptors, stages);
+    {
+        std::vector<Pipeline::Descriptor> descriptors{
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eAccelerationStructureKHR,
+                .stageFlags =
+                    vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageImage,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eUniformBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eRaygenKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eUniformBuffer,
+                .stageFlags =
+                    vk::ShaderStageFlagBits::eClosestHitKHR | vk::ShaderStageFlagBits::eMissKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eSampler,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eStorageBuffer,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR},
+            Pipeline::Descriptor{
+                .type = vk::DescriptorType::eSampledImage,
+                .stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR,
+                .count = MaxBoundTextures,
+                .variableCount = true},
+        };
+
+        std::unordered_map<RayTracingStage, Resource::Id> stages{
+            {RayTracingStage::Generate, Resource::Id::ProbeGenShader},
+            {RayTracingStage::Hit, Resource::Id::HitShader},
+            {RayTracingStage::Miss, Resource::Id::MissShader},
+            {RayTracingStage::ShadowMiss, Resource::Id::ShadowMissShader},
+        };
+
+        mProbeUpdatePipeline = new Pipeline(context, descriptors, stages);
+
+        mProbeGrid = new ProbeGrid(context);
+    }
+
     CreateStorageImage();
     CreateUniformBuffer();
     CreateMaterialUniforms();
@@ -257,27 +306,51 @@ void Renderer::UpdateMaterialUniforms(const Scene::SceneMaterials& materialInfo)
 
 void Renderer::CreateDescriptors(const Scene::SceneMaterials& materialInfo) {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
+    {
+        vk::DescriptorPoolCreateInfo poolCreateInfo =
+            vk::DescriptorPoolCreateInfo()
+                .setPoolSizes(mMainPassPipeline->GetDescriptorSizes())
+                .setMaxSets(1);
+        mDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
 
-    vk::DescriptorPoolCreateInfo poolCreateInfo =
-        vk::DescriptorPoolCreateInfo()
-            .setPoolSizes(mMainPassPipeline->GetDescriptorSizes())
-            .setMaxSets(1);
-    mDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
+        std::vector<uint32_t> descriptorCounts{static_cast<uint32_t>(materialInfo.textures.size())};
+        vk::DescriptorSetVariableDescriptorCountAllocateInfo dynamicCountInfo =
+            vk::DescriptorSetVariableDescriptorCountAllocateInfo().setDescriptorCounts(
+                descriptorCounts);
 
-    std::vector<uint32_t> descriptorCounts{static_cast<uint32_t>(materialInfo.textures.size())};
-    vk::DescriptorSetVariableDescriptorCountAllocateInfo dynamicCountInfo =
-        vk::DescriptorSetVariableDescriptorCountAllocateInfo().setDescriptorCounts(
-            descriptorCounts);
+        vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
+            vk::DescriptorSetAllocateInfo()
+                .setDescriptorPool(mDescriptorPool)
+                .setSetLayouts(mMainPassPipeline->GetDescriptorLayout())
+                .setPNext(&dynamicCountInfo);
+        mDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(
+                                            descriptorAllocateInfo,
+                                            mContext->GetDevice()->GetDispatcher()))
+                             .front();
+    }
 
-    vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
-        vk::DescriptorSetAllocateInfo()
-            .setDescriptorPool(mDescriptorPool)
-            .setSetLayouts(mMainPassPipeline->GetDescriptorLayout())
-            .setPNext(&dynamicCountInfo);
-    mDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(
-                                        descriptorAllocateInfo,
-                                        mContext->GetDevice()->GetDispatcher()))
-                         .front();
+    {
+        vk::DescriptorPoolCreateInfo poolCreateInfo =
+            vk::DescriptorPoolCreateInfo()
+                .setPoolSizes(mProbeUpdatePipeline->GetDescriptorSizes())
+                .setMaxSets(1);
+        mProbeDescriptorPool = VKRT_ASSERT_VK(logicalDevice.createDescriptorPool(poolCreateInfo));
+
+        std::vector<uint32_t> descriptorCounts{static_cast<uint32_t>(materialInfo.textures.size())};
+        vk::DescriptorSetVariableDescriptorCountAllocateInfo dynamicCountInfo =
+            vk::DescriptorSetVariableDescriptorCountAllocateInfo().setDescriptorCounts(
+                descriptorCounts);
+
+        vk::DescriptorSetAllocateInfo descriptorAllocateInfo =
+            vk::DescriptorSetAllocateInfo()
+                .setDescriptorPool(mProbeDescriptorPool)
+                .setSetLayouts(mProbeUpdatePipeline->GetDescriptorLayout())
+                .setPNext(&dynamicCountInfo);
+        mProbeDescriptorSet = VKRT_ASSERT_VK(logicalDevice.allocateDescriptorSets(
+                                                 descriptorAllocateInfo,
+                                                 mContext->GetDevice()->GetDispatcher()))
+                                  .front();
+    }
 }
 
 void Renderer::UpdateDescriptors(const Scene::SceneMaterials& materialInfo) {
@@ -381,6 +454,50 @@ void Renderer::UpdateDescriptors(const Scene::SceneMaterials& materialInfo) {
         texturesWrite};
 
     logicalDevice.updateDescriptorSets(writeDescriptorSets, {});
+
+    {
+        accelerationStructureWrite.setDstSet(mProbeDescriptorSet);
+
+        vk::DescriptorImageInfo storageImageInfo =
+            vk::DescriptorImageInfo()
+                .setImageView(mProbeGrid->GetTexture()->GetImageView())
+                .setImageLayout(vk::ImageLayout::eGeneral);
+        vk::WriteDescriptorSet imageWrite =
+            vk::WriteDescriptorSet()
+                .setDstSet(mProbeDescriptorSet)
+                .setDstBinding(1)
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eStorageImage)
+                .setImageInfo(storageImageInfo);
+
+        vk::WriteDescriptorSet probeGridUniformBuffer =
+            vk::WriteDescriptorSet()
+                .setDstSet(mProbeDescriptorSet)
+                .setDstBinding(2)
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                .setBufferInfo(mProbeGrid->GetDescriptionBuffer()->GetDescriptorInfo());
+
+        sceneUniformBufferWrite.setDstSet(mProbeDescriptorSet);
+        lightMetadataUniformBufferWrite.setDstSet(mProbeDescriptorSet);
+        lightUniformBufferWrite.setDstSet(mProbeDescriptorSet);
+        samplerWrite.setDstSet(mProbeDescriptorSet);
+        materialsWrite.setDstSet(mProbeDescriptorSet);
+        texturesWrite.setDstSet(mProbeDescriptorSet);
+
+        std::vector<vk::WriteDescriptorSet> probeWriteDescriptorSets{
+            accelerationStructureWrite,
+            imageWrite,
+            probeGridUniformBuffer,
+            sceneUniformBufferWrite,
+            lightMetadataUniformBufferWrite,
+            lightUniformBufferWrite,
+            samplerWrite,
+            materialsWrite,
+            texturesWrite};
+
+        logicalDevice.updateDescriptorSets(probeWriteDescriptorSets, {});
+    }
 }
 
 void Renderer::Render(Camera* camera) {
@@ -389,85 +506,136 @@ void Renderer::Render(Camera* camera) {
     {
         VKRT_ASSERT_VK(commandBuffer.begin(vk::CommandBufferBeginInfo{}));
 
-        mScene->Update(commandBuffer);
-        Scene::SceneMaterials materials = mScene->GetMaterialProxies();
-        UpdateMaterialUniforms(materials);
-        UpdateCameraUniforms(camera);
-        UpdateLightUniforms();
-        if (!mDescriptorSet) {
-            CreateDescriptors(materials);
+        // Create and update all buffers and textures
+        {
+            mScene->Update(commandBuffer);
+            Scene::SceneMaterials materials = mScene->GetMaterialProxies();
+            UpdateMaterialUniforms(materials);
+            UpdateCameraUniforms(camera);
+            mProbeGrid->UpdateData();
+            UpdateLightUniforms();
+            if (!mDescriptorSet) {
+                CreateDescriptors(materials);
+            }
+            UpdateDescriptors(materials);
         }
-        UpdateDescriptors(materials);
 
-        commandBuffer.bindPipeline(
-            vk::PipelineBindPoint::eRayTracingKHR,
-            mMainPassPipeline->GetPipelineHandle());
-        commandBuffer.bindDescriptorSets(
-            vk::PipelineBindPoint::eRayTracingKHR,
-            mMainPassPipeline->GetPipelineLayout(),
-            0,
-            mDescriptorSet,
-            nullptr);
+        // Update all probes
+        {
+            mProbeGrid->GetTexture()->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eUndefined,
+                vk::ImageLayout::eGeneral,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
+
+            commandBuffer.bindPipeline(
+                vk::PipelineBindPoint::eRayTracingKHR,
+                mProbeUpdatePipeline->GetPipelineHandle());
+
+            commandBuffer.bindDescriptorSets(
+                vk::PipelineBindPoint::eRayTracingKHR,
+                mProbeUpdatePipeline->GetPipelineLayout(),
+                0,
+                mProbeDescriptorSet,
+                nullptr);
+
+            const Pipeline::RayTracingTablesRef& tableRef = mProbeUpdatePipeline->GetTablesRef();
+            const glm::uvec3 dispatchDimensions = mProbeGrid->GetDispatchDimensions();
+            commandBuffer.traceRaysKHR(
+                tableRef.rayGen,
+                tableRef.rayMiss,
+                tableRef.rayHit,
+                tableRef.callable,
+                dispatchDimensions.x,
+                dispatchDimensions.y,
+                dispatchDimensions.z,
+                mContext->GetDevice()->GetDispatcher());
+
+            mProbeGrid->GetTexture()->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eGeneral,
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
+        }
 
         const vk::Extent2D& imageSize = mContext->GetSwapchain()->GetExtent();
-        const Pipeline::RayTracingTablesRef& tableRef = mMainPassPipeline->GetTablesRef();
-        commandBuffer.traceRaysKHR(
-            tableRef.rayGen,
-            tableRef.rayMiss,
-            tableRef.rayHit,
-            tableRef.callable,
-            imageSize.width,
-            imageSize.height,
-            1,
-            mContext->GetDevice()->GetDispatcher());
 
-        Texture* currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
-        const vk::ImageSubresourceRange subresourceRange =
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+        // Main pass, render to image
+        {
+            commandBuffer.bindPipeline(
+                vk::PipelineBindPoint::eRayTracingKHR,
+                mMainPassPipeline->GetPipelineHandle());
+            commandBuffer.bindDescriptorSets(
+                vk::PipelineBindPoint::eRayTracingKHR,
+                mMainPassPipeline->GetPipelineLayout(),
+                0,
+                mDescriptorSet,
+                nullptr);
 
-        currentSwapchainImage->SetImageLayout(
-            commandBuffer,
-            vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eTransferDstOptimal,
-            vk::PipelineStageFlagBits::eAllCommands,
-            vk::PipelineStageFlagBits::eAllCommands);
+            const Pipeline::RayTracingTablesRef& tableRef = mMainPassPipeline->GetTablesRef();
+            commandBuffer.traceRaysKHR(
+                tableRef.rayGen,
+                tableRef.rayMiss,
+                tableRef.rayHit,
+                tableRef.callable,
+                imageSize.width,
+                imageSize.height,
+                1,
+                mContext->GetDevice()->GetDispatcher());
+        }
 
-        mStorageTexture->SetImageLayout(
-            commandBuffer,
-            vk::ImageLayout::eGeneral,
-            vk::ImageLayout::eTransferSrcOptimal,
-            vk::PipelineStageFlagBits::eAllCommands,
-            vk::PipelineStageFlagBits::eAllCommands);
+        // Copy redered image to swapchain
+        {
+            Texture* currentSwapchainImage = mContext->GetSwapchain()->GetCurrentImage();
+            const vk::ImageSubresourceRange subresourceRange =
+                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
-        vk::ImageCopy imageCopyRegion =
-            vk::ImageCopy()
-                .setSrcSubresource(
-                    vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
-                .setSrcOffset(vk::Offset3D(0, 0, 0))
-                .setDstSubresource(
-                    vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
-                .setDstOffset(vk::Offset3D(0, 0, 0))
-                .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
-        commandBuffer.copyImage(
-            mStorageTexture->GetImage(),
-            vk::ImageLayout::eTransferSrcOptimal,
-            currentSwapchainImage->GetImage(),
-            vk::ImageLayout::eTransferDstOptimal,
-            imageCopyRegion);
+            currentSwapchainImage->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eUndefined,
+                vk::ImageLayout::eTransferDstOptimal,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
 
-        currentSwapchainImage->SetImageLayout(
-            commandBuffer,
-            vk::ImageLayout::eTransferDstOptimal,
-            vk::ImageLayout::ePresentSrcKHR,
-            vk::PipelineStageFlagBits::eAllCommands,
-            vk::PipelineStageFlagBits::eAllCommands);
+            mStorageTexture->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eGeneral,
+                vk::ImageLayout::eTransferSrcOptimal,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
 
-        mStorageTexture->SetImageLayout(
-            commandBuffer,
-            vk::ImageLayout::eTransferSrcOptimal,
-            vk::ImageLayout::eGeneral,
-            vk::PipelineStageFlagBits::eAllCommands,
-            vk::PipelineStageFlagBits::eAllCommands);
+            vk::ImageCopy imageCopyRegion =
+                vk::ImageCopy()
+                    .setSrcSubresource(
+                        vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                    .setSrcOffset(vk::Offset3D(0, 0, 0))
+                    .setDstSubresource(
+                        vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1))
+                    .setDstOffset(vk::Offset3D(0, 0, 0))
+                    .setExtent(vk::Extent3D(imageSize.width, imageSize.height, 1));
+            commandBuffer.copyImage(
+                mStorageTexture->GetImage(),
+                vk::ImageLayout::eTransferSrcOptimal,
+                currentSwapchainImage->GetImage(),
+                vk::ImageLayout::eTransferDstOptimal,
+                imageCopyRegion);
+
+            currentSwapchainImage->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eTransferDstOptimal,
+                vk::ImageLayout::ePresentSrcKHR,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
+
+            mStorageTexture->SetImageLayout(
+                commandBuffer,
+                vk::ImageLayout::eTransferSrcOptimal,
+                vk::ImageLayout::eGeneral,
+                vk::PipelineStageFlagBits::eAllCommands,
+                vk::PipelineStageFlagBits::eAllCommands);
+        }
 
         VKRT_ASSERT_VK(commandBuffer.end());
     }
@@ -499,6 +667,7 @@ void Renderer::Render(Camera* camera) {
 Renderer::~Renderer() {
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
     logicalDevice.destroyDescriptorPool(mDescriptorPool);
+    logicalDevice.destroyDescriptorPool(mProbeDescriptorPool);
     logicalDevice.destroySampler(mTextureSampler);
 }
 

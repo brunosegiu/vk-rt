@@ -240,7 +240,7 @@ void main() {
             }
         }
     }
-
+    
     if (metallic > 0.0f) {
         const vec3 reflectionOrigin = vertex.position;
         const vec3 reflectionDirection = reflect(D, N);
@@ -308,6 +308,6 @@ void main() {
         }
         color += mix(refractionColor, reflectionColor, fresnelTerm);
     }
-
+    
     rayPayload.color = color;
 }

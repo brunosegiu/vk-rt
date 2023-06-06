@@ -42,7 +42,7 @@ Texture::Texture(
 
     vk::ImageViewCreateInfo imageViewCreateInfo =
         vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
+            .setViewType(layers == 1 ? vk::ImageViewType::e2D : vk::ImageViewType::e2DArray)
             .setFormat(format)
             .setSubresourceRange(vk::ImageSubresourceRange()
                                      .setAspectMask(vk::ImageAspectFlagBits::eColor)

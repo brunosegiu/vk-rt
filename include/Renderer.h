@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "Context.h"
 #include "Pipeline.h"
+#include "ProbeGrid.h"
 #include "RefCountPtr.h"
 #include "Scene.h"
 
@@ -46,6 +47,11 @@ private:
     vk::DescriptorSet mDescriptorSet;
 
     vk::Sampler mTextureSampler;
+
+    ScopedRefPtr<Pipeline> mProbeUpdatePipeline;
+    ScopedRefPtr<ProbeGrid> mProbeGrid;
+    vk::DescriptorPool mProbeDescriptorPool;
+    vk::DescriptorSet mProbeDescriptorSet;
 };
 
 }  // namespace VKRT
