@@ -11,7 +11,16 @@ struct Resource {
     const uint8_t* buffer;
     size_t size;
 
-    enum class Id { GenShader, HitShader, MissShader, ShadowMissShader, ProbeGenShader };
+    enum class Id {
+        GenShader,
+        HitShader,
+        MissShader,
+        ShadowMissShader,
+        ProbeGenShader,
+        ProbeHitShader,
+        ProbeMissShader,
+        ProbeShadowMissShader
+    };
 };
 
 class ResourceLoader {

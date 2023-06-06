@@ -8,6 +8,7 @@ const int ShadowMissIndex = 1;
 
 const float TMin = 0.001f;
 const float TMax = 1000.0f;
+const float Infinity = TMax * 100.0f;
 const uint DefaultSBTOffset = 0;
 const uint DefaultSBTStride = 0;
 
@@ -54,5 +55,11 @@ struct Material {
 
 struct RayPayload {
     vec3 color;
+    uint depth;
+};
+
+struct ProbeRayPayload {
+    vec3 color;
+    float rayDepth;
     uint depth;
 };

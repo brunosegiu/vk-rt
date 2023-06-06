@@ -53,5 +53,6 @@ private:
     vk::DeviceMemory mMemory;
     vk::ImageView mImageView;
     bool ownsImage;
+    uint32_t mWidth, mHeight, mLayers;
 };
 }  // namespace VKRT

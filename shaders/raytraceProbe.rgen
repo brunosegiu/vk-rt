@@ -18,7 +18,7 @@ layout(binding = 2, set = 0, scalar) uniform ProbeGridProperties {
 }
 probeGridProperties;
 
-layout(location = ColorPayloadIndex) rayPayloadEXT RayPayload rayPayload;
+layout(location = ColorPayloadIndex) rayPayloadEXT ProbeRayPayload rayPayload;
 
 void main() {
     uvec3 probeId = uvec3(
@@ -30,21 +30,22 @@ void main() {
         gl_LaunchIDEXT.x % probeGridProperties.resolution,
         gl_LaunchIDEXT.y % probeGridProperties.resolution);
 
-    const vec3 probeOrigin = probeGridProperties.origin;
+    vec3 probeDistance = probeGridProperties.size / vec3(probeGridProperties.dimensions);
+    vec3 probeOrigin = probeGridProperties.origin + probeDistance * vec3(probeId);
 
     const vec2 uv = vec2(pixelId) / vec2(probeGridProperties.resolution);
 
-    //vec3 origin = probeOrigin;
-    vec3 origin = vec3(0.0, 8.0, 0.0);
+    vec3 origin = probeOrigin;
     vec3 direction = equirectangularToCartesian(uv);
 
     rayPayload.color = vec3(0.0f);
+    rayPayload.rayDepth = 0.0f;
     rayPayload.depth = 0;
 
     traceRayEXT(
         topLevelAS,
         gl_RayFlagsOpaqueEXT,
-        AllMask,
+        OpaqueMask,
         DefaultSBTOffset,
         DefaultSBTStride,
         ColorMissIndex,
@@ -55,5 +56,6 @@ void main() {
         ColorPayloadIndex);
 
     const vec3 color = rayPayload.color;
-    imageStore(image, ivec3(gl_LaunchIDEXT), vec4(color, 0.0));
+    const float depth = rayPayload.rayDepth;
+    imageStore(image, ivec3(gl_LaunchIDEXT), vec4(color, depth));
 }

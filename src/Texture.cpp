@@ -14,7 +14,12 @@ Texture::Texture(
     vk::Format format,
     vk::ImageUsageFlags usageFlags,
     vk::Image image)
-    : mContext(context), mImage(image), ownsImage(true) {
+    : mContext(context),
+      mImage(image),
+      ownsImage(true),
+      mWidth(width),
+      mHeight(height),
+      mLayers(layers) {
     ownsImage = !image;
 
     vk::Device& logicalDevice = mContext->GetDevice()->GetLogicalDevice();
@@ -49,7 +54,7 @@ Texture::Texture(
                                      .setBaseMipLevel(0)
                                      .setLevelCount(1)
                                      .setBaseArrayLayer(0)
-                                     .setLayerCount(1))
+                                     .setLayerCount(layers))
             .setImage(mImage);
 
     mImageView = VKRT_ASSERT_VK(logicalDevice.createImageView(imageViewCreateInfo));
@@ -131,7 +136,7 @@ void Texture::SetImageLayout(
     vk::PipelineStageFlags srcStageMask,
     vk::PipelineStageFlags dstStageMask) {
     const vk::ImageSubresourceRange subresourceRange =
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, mLayers);
     vk::ImageMemoryBarrier imageBarrier = vk::ImageMemoryBarrier()
                                               .setOldLayout(oldLayout)
                                               .setNewLayout(newLayout)

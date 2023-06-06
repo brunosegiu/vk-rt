@@ -5,10 +5,10 @@ ProbeGrid::ProbeGrid(ScopedRefPtr<Context> context)
     : mContext(context),
       mProbesTexture(nullptr),
       mProbeGridBuffer(nullptr),
-      mOrigin(),
-      mSize(1, 1, 1),
-      mDimensions(1, 1, 1),
-      mResolution(1024) {
+      mOrigin(0.0f, 20.0f, 0.0f),
+      mSize(40.0f, 40.0f, 40.0f),
+      mDimensions(8, 8, 8),
+      mResolution(64) {
     const uint32_t horizontalResolution = mResolution * mDimensions.x;
     const uint32_t verticalResolution = mResolution * mDimensions.y;
     const uint32_t layerCount = mDimensions.z;
@@ -30,7 +30,7 @@ ProbeGrid::ProbeGrid(ScopedRefPtr<Context> context)
 void ProbeGrid::UpdateData() {
     uint8_t* buffer = mProbeGridBuffer->MapBuffer();
     UniformData data{
-        .origin = mOrigin,
+        .origin = mOrigin - mSize / 2.0f,
         .size = mSize,
         .dimensions = mDimensions,
         .resolution = mResolution,

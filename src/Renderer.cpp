@@ -89,9 +89,9 @@ Renderer::Renderer(ScopedRefPtr<Context> context, ScopedRefPtr<Scene> scene)
 
         std::unordered_map<RayTracingStage, Resource::Id> stages{
             {RayTracingStage::Generate, Resource::Id::ProbeGenShader},
-            {RayTracingStage::Hit, Resource::Id::HitShader},
-            {RayTracingStage::Miss, Resource::Id::MissShader},
-            {RayTracingStage::ShadowMiss, Resource::Id::ShadowMissShader},
+            {RayTracingStage::Hit, Resource::Id::ProbeHitShader},
+            {RayTracingStage::Miss, Resource::Id::ProbeMissShader},
+            {RayTracingStage::ShadowMiss, Resource::Id::ProbeShadowMissShader},
         };
 
         mProbeUpdatePipeline = new Pipeline(context, descriptors, stages);
